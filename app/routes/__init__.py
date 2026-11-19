@@ -27,7 +27,7 @@ def protected(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
         if not session.get("admin"):
-            return jsonify(error="Autenticação necessária"), 401
+            return jsonify(error="Sessão administrativa expirada ou inválida. Faça login novamente.", code="SESSION_EXPIRED"), 401
         return fn(*args, **kwargs)
     return wrapper
 
@@ -52,6 +52,14 @@ def logout():
 @bp.get("/")
 def home():
     return render_template("dashboard.html") if session.get("admin") else redirect("/login")
+
+
+@bp.get("/api/session")
+def session_status():
+    """Diagnóstico de sessão sem revelar cookies ou segredos."""
+    if not session.get("admin"):
+        return jsonify(authenticated=False, code="SESSION_EXPIRED"), 401
+    return jsonify(authenticated=True)
 
 
 @bp.get("/api/hosts")
