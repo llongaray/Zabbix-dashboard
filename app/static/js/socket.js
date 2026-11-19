@@ -11,7 +11,8 @@ export function connectStream(handlers) {
     try {
       const data = await requestJSON('/api/snapshot');
       handlers.onSnapshot(data);
-      handlers.onIntegration({connected: true, message: 'Consulta HTTP ativa.'});
+      const status = await requestJSON('/api/collector/status');
+      handlers.onCollector(status);
     } catch (error) {
       handlers.onIntegration({connected: false, message: error.message});
     }
@@ -48,6 +49,8 @@ export function connectStream(handlers) {
     socket.on('host_items', handlers.onHostItems);
     socket.on('host_error', handlers.onHostError);
     socket.on('integration_status', handlers.onIntegration);
+    socket.on('collector_status', handlers.onCollector);
+    socket.on('host_pending', handlers.onHostPending);
     socket.on('token_validated', handlers.onTokenValidated);
   } else {
     enableFallback();
