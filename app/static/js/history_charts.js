@@ -127,7 +127,12 @@ export function renderMetric(kind, data, sourceLabel) {
         x: {
           type: 'linear',
           ticks: {color: '#94a2ca', maxTicksLimit: 6,
-            callback: value => new Date(Number(value)).toLocaleDateString('pt-BR')},
+            callback: value => {
+              const date = new Date(Number(value));
+              return maxX - minX <= 2 * 86400000 ?
+                date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'}) :
+                date.toLocaleDateString('pt-BR');
+            }},
           grid: {color: '#2e3657'},
         },
         y: {
