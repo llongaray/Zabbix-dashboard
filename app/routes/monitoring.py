@@ -5,40 +5,73 @@ from flask import jsonify, request
 
 from app.routes import bp
 from app.routes.decorators import protected
-from app.services import monitoring, zabbix
+from app.services import cache, zabbix
 
 
 @bp.get("/api/hosts")
 @protected
 def hosts():
-    return jsonify(zabbix.hosts())
+    return jsonify((cache.get("overview") or {}).get("hosts", []))
 
 
 @bp.get("/api/hosts/<host_id>/items")
 @protected
 def items(host_id):
-    data = zabbix.items(host_id)
-    # Compatível com o cliente antigo; permite transferir itens + gauges em
-    # apenas uma consulta à API Zabbix durante o fallback HTTP.
+    if not host_id.isdigit():
+        raise ValueError("ID de host inválido.")
+    data = cache.get("host:" + host_id)
+    if not data:
+        data = {"hostid": host_id, "items": [], "gauges": {},
+                "pending": True,
+                "message": "Aguardando a primeira coleta do worker para este host."}
     if request.args.get("include_gauges") == "1":
-        return jsonify({
-            "hostid": host_id,
-            "items": data,
-            "gauges": monitoring.gauge_metrics(data),
-        })
-    return jsonify(data)
+        return jsonify(data)
+    return jsonify(data["items"])
 
 
 @bp.get("/api/hosts/<host_id>/gauges")
 @protected
 def gauges(host_id):
-    return jsonify(monitoring.gauge_metrics(zabbix.items(host_id)))
+    if not host_id.isdigit():
+        raise ValueError("ID de host inválido.")
+    return jsonify((cache.get("host:" + host_id) or {}).get("gauges", {}))
 
 
 @bp.get("/api/snapshot")
 @protected
 def snapshot():
-    return jsonify(monitoring.snapshot())
+    data = cache.get("overview")
+    if data is None:
+        data = {"hosts": [], "problems": [],
+                "kpis": {"hosts": None, "enabled": None,
+                         "active_problems": None},
+                "status": "warming_up",
+                "warning": "Aguardando a primeira coleta independente do worker."}
+    response = jsonify(data)
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@bp.get("/api/collector/status")
+@protected
+def collector_status():
+    return jsonify(cache.get("worker_status") or {
+        "status": "starting",
+        "message": "Worker ainda não registrou uma coleta.",
+    })
+
+
+@bp.get("/api/history/local/<host_id>")
+@protected
+def local_history(host_id):
+    if not host_id.isdigit():
+        raise ValueError("Host inválido.")
+    try:
+        days = max(1, min(3, int(request.args.get("days", "2"))))
+    except ValueError as exc:
+        raise ValueError("Período inválido.") from exc
+    return jsonify({"hostid": host_id, "source": "postgresql",
+                    "series": cache.samples(host_id, days=days)})
 
 
 @bp.get("/api/history/<item_id>")
@@ -58,7 +91,7 @@ def history(item_id):
 @bp.get("/api/problems")
 @protected
 def problems():
-    return jsonify(zabbix.problems())
+    return jsonify((cache.get("overview") or {}).get("problems", []))
 
 
 @bp.get("/api/groups")
