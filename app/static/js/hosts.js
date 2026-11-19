@@ -116,7 +116,23 @@ function renderGauges(items, gauges) {
         String(metric.value || '0') + ' ' + (metric.units || '') : 'N/D';
       const detail = document.createElement('small');
       detail.textContent = metric ? metric.name : 'Item não identificado no Zabbix';
-      card.append(title, value, detail);
+      // Utiliza anel de progresso apenas quando o item informa porcentagem real.
+      const numeric = metric ? Number(metric.value) : NaN;
+      const isPercent = metric && String(metric.units).trim() === '%' &&
+        Number.isFinite(numeric) && numeric >= 0 && numeric <= 100;
+      if (isPercent) {
+        const ring = document.createElement('div');
+        ring.className = 'progress-ring';
+        ring.style.setProperty('--progress', numeric + '%');
+        ring.setAttribute('role', 'img');
+        ring.setAttribute('aria-label', label + ': ' + numeric + '%');
+        const text = document.createElement('span');
+        text.textContent = numeric.toFixed(1) + '%';
+        ring.append(text);
+        card.append(title, ring, detail);
+      } else {
+        card.append(title, value, detail);
+      }
       container.append(card);
     }
   }
