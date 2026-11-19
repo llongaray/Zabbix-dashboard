@@ -56,8 +56,7 @@ def test_connection():
     if not same_origin():
         return jsonify(error="Origem não autorizada."), 403
     report = zabbix.verify_token(zabbix.stored_token())
-    version = zabbix.api_version()
-    return jsonify(connected=True, version=version, **report)
+    return jsonify(connected=True, **report)
 
 
 @bp.get("/api/catalog")
