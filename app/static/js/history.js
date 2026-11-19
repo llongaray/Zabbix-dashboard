@@ -2,7 +2,7 @@
 import {requestJSON} from './api.js';
 import {getSelectedHostId} from './hosts.js';
 import {$, setMessage, showView} from './state.js';
-import {renderLocal, renderMetric} from './history_charts.js';
+import {clearHistoryCharts, renderLocal, renderMetric} from './history_charts.js';
 
 const metrics = ['cpu', 'memory', 'gpu', 'network'];
 let knownHosts = [];
@@ -77,6 +77,7 @@ async function loadHistory({force = false} = {}) {
   lastRequestTime = Date.now();
   generation++;
   const currentGeneration = generation;
+  clearHistoryCharts();
   markLoading();
   setMessage('#chart-status', 'Carregando mini-histórico PostgreSQL...');
   // Não espera um request remoto para renderizar o primeiro gráfico.
