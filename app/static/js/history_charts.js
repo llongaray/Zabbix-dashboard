@@ -41,16 +41,17 @@ export function clearHistoryCharts() {
 export function renderMetric(kind, data, sourceLabel) {
   const target = document.getElementById('chart-' + kind);
   if (!target) return;
-  chartObjects.get(kind)?.destroy();
-  chartObjects.delete(kind);
   const series = normalizedSeries(data.series);
   const actual = series.filter(row => row.points.length);
   if (!actual.length) {
-    setText('#history-badge-' + kind, 'Sem dados');
+    // Erro ou ausência de retenção oficial não apaga a prévia persistida.
+    if (!chartObjects.has(kind)) setText('#history-badge-' + kind, 'Sem dados');
     setMessage('#history-message-' + kind,
-      data.message || 'Não há pontos históricos para este item/período.');
+      data.message || 'Sem série oficial para este período; cache local preservado.');
     return;
   }
+  chartObjects.get(kind)?.destroy();
+  chartObjects.delete(kind);
   if (typeof window.Chart === 'undefined') {
     setMessage('#history-message-' + kind, 'Chart.js não foi carregado.', true);
     return;
