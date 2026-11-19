@@ -18,7 +18,10 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-zabbix}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-zabbix_dashboard}
+      POSTGRES_HOST: db
+      POSTGRES_DB: ${POSTGRES_DB:-zabbix_dashboard}
+      POSTGRES_USER: ${POSTGRES_USER:-zabbix}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Configure POSTGRES_PASSWORD}
     ports:
       - "127.0.0.1:5000:5000"
     depends_on:
