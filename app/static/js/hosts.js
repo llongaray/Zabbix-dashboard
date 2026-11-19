@@ -258,3 +258,11 @@ export function renderItems(payload) {
 export function showHostError(error) {
   setMessage('#server-status', error.message || 'Falha ao consultar host.', true);
 }
+
+export function showHostPending(event) {
+  if (String(event?.hostid) === String(selectedHost?.hostid)) {
+    setMessage('#server-status', event.message ||
+      'Aguardando o worker coletar este servidor.');
+    setText('#overview-summary', 'Servidor aguardando a primeira coleta');
+  }
+}
