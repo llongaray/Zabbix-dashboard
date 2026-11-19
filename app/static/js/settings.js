@@ -13,25 +13,38 @@ export function initializeSettings(options = {}) {
 }
 
 export async function loadConfiguration() {
+  // Independente: falha no catálogo não pode impedir a leitura do token ou URL.
+  let config = {token_configured: false, token_source: 'none'};
   try {
-    const [config, catalog] = await Promise.all([
-      requestJSON('/api/config'),
-      requestJSON('/api/catalog'),
-    ]);
-    setText('#endpoint', catalog.endpoint);
+    config = await requestJSON('/api/config');
+    setText('#endpoint', config.zabbix_url + '/api_jsonrpc.php');
     setText('#poll-interval', config.poll_interval + ' segundos');
-    setText('#config-token', config.token_configured ? 'Cadastrado' : 'Pendente');
+    setText('#config-token', config.token_configured ? 'Disponível' : 'Pendente');
+    const source = {
+      postgresql: 'Fonte: PostgreSQL (criptografado)',
+      env: 'Fonte: variáveis do .env',
+      none: 'Nenhum token configurado',
+    };
+    setText('#config-token-source', source[config.token_source] || 'Fonte desconhecida');
     $('#test-token').disabled = !config.token_configured;
+    setMessage('#settings-status', config.token_configured ?
+      'Token reconhecido pelo Flask. Use Testar token salvo para verificar o Zabbix.' :
+      'Configure o token do Zabbix no formulário ou em ZABBIX_API_TOKEN no .env.');
+  } catch (error) {
+    setText('#config-token', 'Erro');
+    setText('#config-token-source', 'Falha ao consultar /api/config');
+    setMessage('#settings-status', 'Falha ao carregar configuração: ' + error.message, true);
+  }
+
+  try {
+    const catalog = await requestJSON('/api/catalog');
+    setText('#endpoint', catalog.endpoint);
     methods = catalog.methods || [];
     renderCatalog({});
-    setMessage('#settings-status', config.token_configured ?
-      'Token cadastrado. Teste a conexão ou aguarde a atualização por WebSocket.' :
-      'Cadastre seu token nativo do Zabbix para começar.');
-    return config;
   } catch (error) {
-    setMessage('#settings-status', error.message, true);
-    return {token_configured: false};
+    setMessage('#methods-status', 'Catálogo indisponível: ' + error.message, true);
   }
+  return config;
 }
 
 async function handleSave(event) {
@@ -49,6 +62,7 @@ async function handleSave(event) {
     const result = await postJSON('/api/config', {token});
     $('#token').value = '';
     setText('#config-token', 'Validado');
+    setText('#config-token-source', 'Fonte: PostgreSQL (criptografado)');
     setText('#config-latency', result.validation.latency_ms + ' ms');
     setText('#config-version', result.validation.version || 'Indisponível');
     $('#test-token').disabled = false;
