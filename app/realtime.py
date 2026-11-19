@@ -1,9 +1,8 @@
-"""Canal Socket.IO autenticado para atualizações de monitoramento.
+"""Socket.IO somente distribui cache PostgreSQL; nunca consulta a API Zabbix.
 
-Zabbix não fornece WebSocket neste fluxo: o backend consulta JSON-RPC e envia
-as alterações a todos os navegadores autorizados. Um worker por container.
+A coleta é independente em app.worker. Uma conexão nova recebe os últimos
+valores já salvos, sem bloquear a renderização nem iniciar coleta remota.
 """
-import os
 import re
 import threading
 import time
@@ -11,62 +10,50 @@ import time
 from flask import request, session
 from flask_socketio import SocketIO
 
-from app.services import monitoring, zabbix
+from app.services import cache
 
 socketio = SocketIO(async_mode="threading", cors_allowed_origins=None)
 _lock = threading.Lock()
 _wake = threading.Event()
 _started = False
-_last_refresh = 0.0
 _watchers = {}
-_last_snapshot = None
+_last_snapshot_stamp = None
+_last_hosts_stamps = {}
 
 
 def request_refresh():
+    """Acorda distribuidor de cache; o worker coleta no próprio intervalo."""
     _wake.set()
 
 
-def _poll():
-    global _last_snapshot
-    interval = max(15, min(120, int(os.getenv("POLL_INTERVAL", "25"))))
+def _broadcast_cache():
+    """Emite alterações de cache sem carregar dados diretamente do Zabbix."""
+    global _last_snapshot_stamp
     while True:
         try:
-            if not zabbix.stored_token():
-                socketio.emit("integration_status", {
-                    "connected": False,
-                    "message": "Cadastre o token da API em Configurações.",
-                })
-            else:
-                payload = monitoring.snapshot()
-                _last_snapshot = payload
-                socketio.emit("snapshot", payload)
-                socketio.emit("integration_status", {
-                    "connected": True, "message": "Zabbix conectado.",
-                })
-                with _lock:
-                    watchers = list(_watchers.items())
-                by_host = {}
-                for sid, host_id in watchers:
-                    try:
-                        if host_id not in by_host:
-                            data = zabbix.items(host_id)
-                            by_host[host_id] = {
-                                "hostid": host_id,
-                                "items": data,
-                                "gauges": monitoring.gauge_metrics(data),
-                            }
-                        socketio.emit("host_items", by_host[host_id], to=sid)
-                    except zabbix.ZabbixError as exc:
-                        socketio.emit("host_error", {"message": str(exc)}, to=sid)
-        except Exception as exc:
-            # Não altera sessão administrativa por falhas externas do Zabbix.
-            message = str(exc) if isinstance(exc, zabbix.ZabbixError) else (
-                "Falha interna no coletor. Consulte os logs."
-            )
-            socketio.emit("integration_status", {
-                "connected": False, "message": message,
+            overview = cache.get("overview")
+            if overview and overview.get("cached_at") != _last_snapshot_stamp:
+                _last_snapshot_stamp = overview["cached_at"]
+                socketio.emit("snapshot", overview)
+            worker = cache.get("worker_status")
+            if worker:
+                socketio.emit("collector_status", worker)
+            with _lock:
+                watchers = list(_watchers.items())
+            for sid, host_id in watchers:
+                payload = cache.get("host:" + host_id)
+                if not payload:
+                    continue
+                version = payload.get("cached_at")
+                if _last_hosts_stamps.get(sid) != (host_id, version):
+                    _last_hosts_stamps[sid] = (host_id, version)
+                    socketio.emit("host_items", payload, to=sid)
+        except Exception:
+            # Falha transitória na leitura do banco não derruba a sessão do navegador.
+            socketio.emit("collector_status", {
+                "status": "error", "message": "Cache indisponível no momento.",
             })
-        _wake.wait(interval)
+        _wake.wait(timeout=4)
         _wake.clear()
 
 
@@ -75,12 +62,20 @@ def connect(auth=None):
     global _started
     if not session.get("admin"):
         return False
-    if _last_snapshot is not None:
-        socketio.emit("snapshot", _last_snapshot, to=request.sid)
+    # Uso de PostgreSQL apenas; dados antigos ficam disponíveis imediatamente.
+    try:
+        snapshot = cache.get("overview")
+        if snapshot:
+            socketio.emit("snapshot", snapshot, to=request.sid)
+        worker = cache.get("worker_status")
+        if worker:
+            socketio.emit("collector_status", worker, to=request.sid)
+    except Exception:
+        pass
     with _lock:
         if not _started:
             _started = True
-            socketio.start_background_task(_poll)
+            socketio.start_background_task(_broadcast_cache)
     request_refresh()
 
 
@@ -88,17 +83,13 @@ def connect(auth=None):
 def disconnect():
     with _lock:
         _watchers.pop(request.sid, None)
+        _last_hosts_stamps.pop(request.sid, None)
 
 
 @socketio.on("refresh")
 def refresh():
-    global _last_refresh
     if not session.get("admin"):
         return False
-    with _lock:
-        if time.monotonic() - _last_refresh < 8:
-            return
-        _last_refresh = time.monotonic()
     request_refresh()
 
 
@@ -108,8 +99,19 @@ def watch_host(payload):
         return False
     host_id = str((payload or {}).get("hostid", ""))
     if not re.fullmatch(r"[0-9]{1,20}", host_id):
-        socketio.emit("host_error", {"message": "ID de host inválido."}, to=request.sid)
+        socketio.emit("host_error", {"message": "ID de host inválido."},
+                      to=request.sid)
         return
     with _lock:
         _watchers[request.sid] = host_id
+        _last_hosts_stamps.pop(request.sid, None)
+    # A consulta abaixo é somente local; não faz qualquer I/O com o Zabbix.
+    latest = cache.get("host:" + host_id)
+    if latest:
+        socketio.emit("host_items", latest, to=request.sid)
+    else:
+        socketio.emit("host_pending", {
+            "hostid": host_id,
+            "message": "Coleta em andamento no worker; aguardando primeiro lote.",
+        }, to=request.sid)
     request_refresh()
