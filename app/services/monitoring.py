@@ -173,3 +173,40 @@ def gauge_metrics(items):
         if kind not in selected or score > selected[kind][0]:
             selected[kind] = (score, result)
     return {kind: result for kind, (_, result) in selected.items()}
+
+
+def coverage_report(items, gauges):
+    """Explica N/D sem inventar GPU, disco ou percentual de banda.
+
+    Chamado pelo coletor uma vez por host e persistido junto com o cache.
+    """
+    hints = {
+        "cpu": ("system.cpu.util", "Item CPU utilization com valor numérico."),
+        "memory": ("vm.memory", "Item de utilização de RAM em porcentagem."),
+        "disk": ("vfs.fs.", "Volume com vfs.fs.size[...,pused] ou "
+                 "vfs.fs.dependent.size[...,pused]."),
+        "gpu": ("gpu", "GPU requer item ou template específico de telemetria."),
+        "network_in": ("net.if.in[", "Interface com taxa real, não descartes/erros."),
+        "network_out": ("net.if.out[", "Interface com taxa real, não descartes/erros."),
+    }
+    report = {}
+    for kind, (prefix, suggestion) in hints.items():
+        if kind in gauges:
+            report[kind] = {"available": True, "reason": None}
+            continue
+        candidates = [str(item.get("key_", "")) for item in items
+                      if prefix in str(item.get("key_", "")).lower()]
+        if not candidates:
+            reason = "Item não monitorado pelo host/template Zabbix."
+        else:
+            reason = ("Existem itens relacionados, mas nenhum contém "
+                      "uma leitura válida com unidades compatíveis.")
+        report[kind] = {
+            "available": False,
+            "reason": reason,
+            "suggestion": suggestion,
+            "related_count": len(candidates),
+            # Somente nomes de chave, sem dados/credenciais.
+            "example_keys": candidates[:3],
+        }
+    return report
