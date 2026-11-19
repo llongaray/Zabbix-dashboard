@@ -8,7 +8,7 @@ from app.realtime import request_refresh, socketio
 from app.routes import bp
 from app.routes.decorators import protected, same_origin
 from app.security import encrypt
-from app.services import zabbix
+from app.services import cache, zabbix
 from app.services.catalog import methods
 
 
@@ -48,6 +48,7 @@ def save_config():
     # A conexão é validada ANTES de substituir a credencial existente.
     report = zabbix.verify_token(candidate)
     put_setting("zabbix_token", encrypt(candidate))
+    cache.invalidate()  # Evita servir dados antigos após troca de permissões.
     # Não retornar ou transmitir o token.
     socketio.emit("token_validated", report)
     request_refresh()
