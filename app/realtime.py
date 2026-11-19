@@ -5,7 +5,6 @@ valores já salvos, sem bloquear a renderização nem iniciar coleta remota.
 """
 import re
 import threading
-import time
 
 from flask import request, session
 from flask_socketio import SocketIO
