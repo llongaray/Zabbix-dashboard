@@ -1,8 +1,8 @@
 /** Orquestrador do frontend; lógica distribuída entre módulos reutilizáveis. */
 import {requestJSON} from './api.js';
 import {initializeNavigation, $, setMessage} from './state.js';
-import {initializeHistory, openHistory} from './history.js';
-import {initializeHosts, getSelectedHostId, renderSnapshot, renderItems, showHostError} from './hosts.js';
+import {initializeHistory, openHistory, updateHistoryHosts} from './history.js';
+import {initializeHosts, getSelectedHostId, renderSnapshot, renderItems, showHostError, showHostPending} from './hosts.js';
 import {initializeSettings, loadConfiguration, onTokenValidated,
   showIntegrationStatus} from './settings.js';
 import {connectStream} from './socket.js';
@@ -13,8 +13,15 @@ async function loadOnce() {
   try {
     const payload = await requestJSON('/api/snapshot');
     renderSnapshot(payload);
+    updateHistoryHosts(payload.hosts);
     if (payload.version) document.querySelector('#config-version').textContent = payload.version;
-    showIntegrationStatus({connected: true, message: 'Integração respondendo.'});
+    try {
+      const worker = await requestJSON('/api/collector/status');
+      showIntegrationStatus({connected: worker.status === 'online',
+        message: worker.message || 'Estado do coletor: ' + worker.status});
+    } catch (workerError) {
+      showIntegrationStatus({connected: false, message: workerError.message});
+    }
   } catch (error) {
     showIntegrationStatus({connected: false, message: error.message});
     setMessage('#overview-status', error.message, true);
@@ -44,12 +51,18 @@ async function initialize() {
     },
     onSnapshot: payload => {
       renderSnapshot(payload);
+      updateHistoryHosts(payload.hosts);
       if (payload.version) {
         document.querySelector('#config-version').textContent = payload.version;
       }
     },
     onHostItems: renderItems,
     onHostError: showHostError,
+    onHostPending: showHostPending,
+    onCollector: worker => showIntegrationStatus({
+      connected: worker.status === 'online',
+      message: worker.message || 'Coletor: ' + worker.status,
+    }),
     onIntegration: showIntegrationStatus,
     onTokenValidated,
   });
