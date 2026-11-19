@@ -180,7 +180,7 @@ def history(item_id, value_type, since, until):
     """Tendências para períodos longos; saída limitada para economizar RAM."""
     if not str(item_id).isdigit() or int(value_type) not in (0, 3):
         raise ZabbixError("Histórico disponível somente para itens numéricos.", 400)
-    method = "trend.get" if until - since > 7 * 86400 else "history.get"
+    method = "trend.get" if until - since > 2 * 86400 else "history.get"
     params = {
         "itemids": [str(item_id)], "time_from": since,
         "time_till": until, "sortfield": "clock",
