@@ -252,6 +252,7 @@ export function renderItems(payload) {
     currentItems.length + ' itens disponíveis');
   // Não inferir métricas de rede no frontend; apenas dados validados pelo backend.
   renderGauges(payload.gauges || {});
+  renderCoverage(payload.diagnostics || {});
   renderItemTable();
 }
 
@@ -265,4 +266,23 @@ export function showHostPending(event) {
       'Aguardando o worker coletar este servidor.');
     setText('#overview-summary', 'Servidor aguardando a primeira coleta');
   }
+}
+
+function renderCoverage(diagnostics) {
+  const container = $('#server-coverage');
+  if (!container) return;
+  const fragment = document.createDocumentFragment();
+  const labels = {
+    cpu: 'CPU', memory: 'RAM', disk: 'Disco',
+    gpu: 'GPU', network_in: 'Rede RX', network_out: 'Rede TX',
+  };
+  for (const [kind, info] of Object.entries(diagnostics)) {
+    if (info.available) continue;
+    const line = document.createElement('p');
+    line.className = 'coverage-warning';
+    line.textContent = (labels[kind] || kind) + ': ' +
+      (info.reason || 'Sem item válido') + ' ' + (info.suggestion || '');
+    fragment.append(line);
+  }
+  container.replaceChildren(fragment);
 }
