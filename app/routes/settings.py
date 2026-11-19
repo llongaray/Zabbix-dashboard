@@ -15,10 +15,14 @@ from app.services.catalog import methods
 @bp.get("/api/config")
 @protected
 def config():
+    # Reporta apenas a origem da credencial; nunca expõe seu conteúdo.
+    encrypted_token = get_setting("zabbix_token")
+    env_token = os.getenv("ZABBIX_API_TOKEN", "").strip()
+    source = "postgresql" if encrypted_token else ("env" if env_token else "none")
     response = jsonify({
         "zabbix_url": zabbix.base_url(),
-        "token_configured": bool(get_setting("zabbix_token") or
-                                 os.getenv("ZABBIX_API_TOKEN")),
+        "token_configured": source != "none",
+        "token_source": source,
         "auth_mode": "API Token (Bearer)",
         "username_required": False,
         "poll_interval": int(os.getenv("POLL_INTERVAL", "25")),
