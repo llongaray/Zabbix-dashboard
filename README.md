@@ -1,40 +1,195 @@
 # Zabbix Dashboard
 
-![Python](https://img.shields.io/badge/Python-3.12-blue) ![Flask](https://img.shields.io/badge/Flask-3.x-black) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-blue) ![Docker](https://img.shields.io/badge/Docker-Compose-blue) ![Status](https://img.shields.io/badge/status-beta-orange)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask-3.x-29313a?logo=flask)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-316192?logo=postgresql&logoColor=white)
+![Socket.IO](https://img.shields.io/badge/Socket.IO-Realtime-6C38B9)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+![Status](https://img.shields.io/badge/status-beta-orange)
+[![Quality checks](https://github.com/llongaray/Zabbix-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/llongaray/Zabbix-dashboard/actions/workflows/ci.yml)
 
-Dashboard web modular para monitoramento de infraestrutura via **API JSON-RPC nativa do Zabbix** com token Bearer, inventário de itens, histórico de 1 a 365 dias e PostgreSQL. Sem OAuth.
+Dashboard web de infraestrutura em **Python, Flask, PostgreSQL 17 e Socket.IO**. Consulta a API oficial JSON-RPC do Zabbix para descobrir hosts, itens, incidentes e histórico de recursos. A interface tem menu lateral, KPIs, tabelas, gráficos e configuração dinâmica do API Token.
 
-## Início rápido
+> **Beta:** o código e os testes automatizados estão no repositório. A compatibilidade com a infraestrutura corporativa e os templates reais do Zabbix deve ser homologada antes de uso de produção.
 
-```bash
+## Principais recursos
+
+- **Somente API Token:** não solicita usuário/senha do Zabbix nem depende de OAuth ou MCP.
+- **Token protegido:** validado por `host.get` e persistido **criptografado com Fernet** no PostgreSQL; nunca é retornado ao navegador.
+- **Configuração sem reload:** salvar ou testar um token atualiza a interface sem recarregar a página.
+- **Tempo quase real:** o backend consulta a API em intervalos e distribui atualizações autenticadas usando Socket.IO/WebSocket, com fallback HTTP no cliente.
+- **Descoberta dinâmica:** hosts e itens visíveis para o token cadastrado, sem lista fixa de máquinas.
+- **Indicadores de recursos:** CPU, memória, disco, rede RX/TX e GPU quando os itens correspondentes são coletados pelo Zabbix.
+- **Histórico:** seleção de 24 horas, 7, 30, 90 ou 365 dias; `history.get` para períodos curtos e `trend.get` para períodos longos.
+- **Catálogo de API:** métodos oficiais de leitura com diagnóstico opcional de permissão e latência.
+- **Diagnósticos:** erros da API Zabbix não invalidam a sessão Flask e não provocam logout automático.
+
+## Como funciona a autenticação?
+
+O Zabbix 7.0 aceita um API Token existente criado pelo frontend ou pela API. As chamadas ao endpoint `/api_jsonrpc.php` usam o cabeçalho `Authorization: Bearer <token>`. Não são necessárias credenciais `username`/`password` para usar um API Token; `user.login` é um método alternativo.
+
+A senha **ADMIN_PASSWORD** é **da aplicação Flask**, independente do token do Zabbix.
+
+Documentação: [Zabbix 7.0 — API](https://www.zabbix.com/documentation/7.0/en/manual/api).
+
+## Instalação Windows + Docker Desktop
+
+### 1. Clonar e configurar variáveis de implantação
+
+```powershell
 git clone git@github.com:llongaray/Zabbix-dashboard.git
 cd Zabbix-dashboard
-cp .env.example .env
-# Configure POSTGRES_PASSWORD, ADMIN_PASSWORD, FLASK_SECRET_KEY e FERNET_KEY
-docker compose up -d --build
+Copy-Item .env.example .env
+notepad .env
 ```
 
-Abra **http://localhost:5000**. A configuração do Zabbix pode ser salva na interface; o token é criptografado no PostgreSQL. Gere `FERNET_KEY` com `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` após instalar `cryptography` ou em um ambiente Python com a dependência.
+Defina no `.env`:
+- `POSTGRES_PASSWORD`: senha forte para o banco.
+- `ADMIN_PASSWORD`: senha administrativa para a tela de login.
+- `FLASK_SECRET_KEY`: chave longa de sessão.
+- `FERNET_KEY`: chave Fernet de criptografia (não a altere sem migrar os tokens).
+- `ZABBIX_URL`: endereço do frontend Zabbix. O exemplo da Avansat já está indicado; pode ser substituído no deployment.
+
+Gerar uma chave de sessão:
+
+```powershell
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+Gerar a chave Fernet (se não tiver `cryptography` no Python local, instale-a primeiro):
+
+```powershell
+python -m pip install cryptography
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+**Não é necessário colocar `ZABBIX_API_TOKEN` no `.env`.** Ele permanece apenas como fallback opcional. A URL de exemplo antiga `zabbix.example.com` não deve ser utilizada; o backend desta versão trata o antigo placeholder usando a URL padrão documentada.
+
+### 2. Iniciar
+
+```powershell
+docker compose up -d --build
+docker compose ps
+docker compose logs --tail=100 dashboard
+```
+
+Abra **http://localhost:5000** (publicação local via `127.0.0.1`).
+
+### 3. Cadastrar o token
+
+1. Entre com a senha `ADMIN_PASSWORD` configurada para o Flask.
+2. Acesse **Configurações**.
+3. Cole **somente o API Token do Zabbix** e clique em **Validar e salvar token**.
+4. O backend valida `host.get` antes de substituir qualquer token existente; se a validação falhar, o anterior é preservado.
+5. Após a confirmação, as áreas de KPIs, servidores, problemas e histórico serão preenchidas conforme as permissões e os dados realmente disponíveis.
+
+O endereço do endpoint é somente leitura na interface, pois pertence à configuração de implantação.
 
 ## Arquitetura
 
-- `main.py`: único orquestrador Python na raiz.
-- `app/__init__.py`: application factory.
-- `app/db.py`: pool SQLAlchemy/PostgreSQL e persistência.
-- `app/security.py`: criptografia Fernet.
-- `app/services/zabbix.py`: cliente JSON-RPC, descoberta e histórico.
-- `app/services/mailing.py`: serviço SMTP STARTTLS preparado para integração.
-- `app/routes/__init__.py`: rotas Flask e autenticação.
-- `app/templates/`: interface web.
+```text
+Zabbix-dashboard/
+├── main.py                   # Único orquestrador Python na raiz
+├── app/
+│   ├── __init__.py           # Application factory
+│   ├── db.py                 # PostgreSQL e pool SQLAlchemy
+│   ├── security.py           # Fernet para credenciais
+│   ├── realtime.py           # Socket.IO autenticado e coletor compartilhado
+│   ├── routes/
+│   │   ├── __init__.py       # Registro de blueprints e erros
+│   │   ├── decorators.py     # Sessão e origem de requisição
+│   │   ├── auth.py           # Login administrativo
+│   │   ├── settings.py       # Token, conexão e métodos API
+│   │   └── monitoring.py     # Hosts, itens, histórico, problemas
+│   ├── services/
+│   │   ├── zabbix.py         # Cliente JSON-RPC e validação
+│   │   ├── catalog.py        # Métodos de leitura suportados
+│   │   ├── monitoring.py     # KPIs e identificação de métricas
+│   │   └── mailing.py        # Serviço SMTP (não conectado ao painel)
+│   ├── static/
+│   │   ├── css/              # Login e dashboard
+│   │   └── js/               # Módulos: API, estado, hosts, gráficos, settings, socket
+│   └── templates/
+├── tests/
+├── compose.yaml
+├── Dockerfile
+├── requirements.txt
+└── .env.example
+```
 
-## Segurança e limitações
+### Topologia de eventos
 
-**Não envie `.env`, credenciais, tokens ou dados reais da infraestrutura para este repositório público.** A chave Fernet deve permanecer fora do banco e do Git. O dashboard vincula-se somente a `127.0.0.1`. A autenticação administrativa é simples e requer endurecimento antes de exposição em rede. O módulo SMTP está preparado, mas a tela de configuração e o agendamento automático de relatórios ainda não estão integrados nesta revisão. GPU e inventário dependem dos itens monitorados no Zabbix. Dados históricos dependem da retenção. A interface consulta o backend sob demanda; WebSocket e alertas agendados estão planejados para a próxima revisão.
+```text
+Zabbix --HTTPS/JSON-RPC--> Flask (poll a cada 25s)
+                               |
+                               | Socket.IO / WebSocket autenticado
+                               v
+                        Dashboard no navegador
+                               |
+                       POST /api/config
+                               |
+                valida host.get antes de gravar
+                               |
+                          PostgreSQL
+                        (token Fernet)
+```
 
-## Desenvolvimento
+**O Zabbix não fornece WebSocket neste fluxo:** WebSocket é a camada entre Flask e navegador, alimentada por consultas periódicas à API. Portanto, não é telemetria instantânea nativa; a frequência real depende dos itens monitorados.
 
-Separação por responsabilidade, funções reutilizáveis, pool de conexões limitado e chamadas de API com timeout. Testes de integração Docker/Zabbix devem ser realizados antes de release estável.
+O projeto usa 1 worker Gunicorn `gthread` por container e limite de pool PostgreSQL, para evitar múltiplos coletores duplicados e reduzir overhead de memória.
+
+## Métodos da API
+
+| Método | Uso |
+| --- | --- |
+| `apiinfo.version` | Versão da API (sem token) |
+| `host.get` / `hostgroup.get` / `hostinterface.get` | Inventário de hosts, grupos e interfaces |
+| `item.get` | Itens monitorados e valores atuais |
+| `history.get` / `trend.get` | Séries temporais |
+| `graph.get` | Gráficos cadastrados |
+| `problem.get` / `trigger.get` | Incidentes e triggers |
+| `template.get` / `maintenance.get` | Templates e manutenções |
+
+São todos métodos de consulta. O dashboard não disponibiliza métodos administrativos como `host.delete`.
+
+Documentação oficial: [Referência de métodos Zabbix 7.0](https://www.zabbix.com/documentation/7.0/en/manual/api/reference).
+
+## Operação, testes e atualização
+
+```powershell
+# Atualizar sem apagar o volume PostgreSQL
+git pull origin main
+docker compose up -d --build --force-recreate
+
+# Diagnóstico
+docker compose logs --tail=100 dashboard
+docker compose ps
+
+# Testes no ambiente de desenvolvimento (Python)
+python -m pip install -r requirements.txt pytest
+python -m pytest -q
+```
+
+Com login ativo, endpoints de diagnóstico do Flask:
+- `GET /api/session`
+- `GET /api/config` (não revela o token)
+- `GET /api/catalog`
+- `POST /api/catalog/check` (consulta permissões)
+- `GET /api/snapshot`
+
+A API Zabbix retornará dados somente conforme os direitos do usuário associado ao token. As métricas de GPU não são garantidas, e a utilização percentual da banda depende de conhecer a capacidade da interface; RX/TX pode ser exibido como taxa em vez de percentual.
+
+## Segurança
+
+Este repositório é **público**. Não faça commit de `.env`, tokens, credenciais SMTP, chaves Fernet, endereços internos privados nem exportações de dados da infraestrutura. Use token dedicado e de menor privilégio possível. Nunca exponha o Flask para a internet sem autenticação forte, TLS, proteção adicional para sessão e revisão de segurança.
+
+## Limitações da versão beta
+
+- A integração SMTP/Microsoft 365 e relatórios automáticos ainda não estão ligados ao painel.
+- Dados de 365 dias dependem da retenção de tendências do Zabbix.
+- O diagnóstico de permissões realiza consultas reais, mas não garante existência de dados para cada método.
+- Não foi validada aqui a conexão com a instância corporativa nem a execução Docker nesse ambiente.
 
 ## Licença
 
-GPL-3.0 — consulte [LICENSE](LICENSE).
+GPL-3.0. Consulte [LICENSE](LICENSE).
