@@ -1,4 +1,4 @@
-# Zabbix Dashboard
+# Avansat | Zabbix Dashboard
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![Flask](https://img.shields.io/badge/Flask-3.x-29313a?logo=flask)
@@ -6,8 +6,19 @@
 ![Socket.IO](https://img.shields.io/badge/Socket.IO-Realtime-6C38B9)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 ![Status](https://img.shields.io/badge/status-beta-orange)
-[![Quality checks](https://github.com/llongaray/Zabbix-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/llongaray/Zabbix-dashboard/actions/workflows/ci.yml)
+[![Quality checks](https://github.com/Avansat-Tecnologias/Zabbix-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/Avansat-Tecnologias/Zabbix-dashboard/actions/workflows/ci.yml)
 
+> **Avansat Tecnologias | Monitoramento de Infraestrutura**
+>
+> Plataforma corporativa para centralização de métricas, análise de desempenho,
+> histórico operacional, planejamento de capacidade e alertas dos servidores
+> monitorados pelo Zabbix.
+>
+> **Organização:** Avansat-Tecnologias
+> **Repositório:** Zabbix-dashboard
+> **Tecnologias:** Python, Flask, PostgreSQL 17, Socket.IO e Docker
+> **Ambiente:** Windows Server e Linux
+> **Status:** Beta — homologação necessária antes da produção
 Dashboard web de infraestrutura em **Python, Flask, PostgreSQL 17 e Socket.IO**. Consulta a API oficial JSON-RPC do Zabbix para descobrir hosts, itens, incidentes e histórico de recursos. A interface tem menu lateral, KPIs, tabelas, gráficos e configuração dinâmica do API Token.
 
 > **Beta:** o código e os testes automatizados estão no repositório. A compatibilidade com a infraestrutura corporativa e os templates reais do Zabbix deve ser homologada antes de uso de produção.
@@ -233,7 +244,7 @@ A API Zabbix retorna dados conforme os direitos do usuário associado ao token e
 
 ## Segurança
 
-Este repositório é **público**. Não faça commit de `.env`, tokens, credenciais SMTP, chaves Fernet, endereços internos privados nem exportações de dados da infraestrutura. Use token dedicado e de menor privilégio possível. Nunca exponha o Flask para a internet sem autenticação forte, TLS, proteção adicional para sessão e revisão de segurança.
+Este repositório é **privado** e pertence à organização **Avansat-Tecnologias**. Não faça commit de `.env`, tokens, credenciais SMTP, chaves Fernet, endereços internos privados nem exportações de dados da infraestrutura. Use token dedicado e de menor privilégio possível. Nunca exponha o Flask para a internet sem autenticação forte, TLS, proteção adicional para sessão e revisão de segurança.
 
 ## Limitações da versão beta
 
