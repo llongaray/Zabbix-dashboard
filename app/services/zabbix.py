@@ -151,6 +151,21 @@ def items(host_id):
     })
 
 
+def items_for_hosts(host_ids):
+    """Consulta lotes de hosts via um único item.get para reduzir chamadas."""
+    normalized = [str(h) for h in host_ids if str(h).isdigit()]
+    if not normalized:
+        return []
+    if len(normalized) > 24:
+        raise ZabbixError("Lote de hosts excede o limite de 24.", 400)
+    return call("item.get", {
+        "hostids": normalized,
+        "output": ["itemid", "hostid", "name", "key_", "lastvalue",
+                   "units", "value_type", "lastclock", "status"],
+        "filter": {"status": 0},
+    })
+
+
 def problems(limit=100):
     return call("problem.get", {
         "output": ["eventid", "name", "severity", "clock"],
