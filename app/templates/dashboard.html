@@ -68,10 +68,28 @@
           <p class="status" id="server-status"></p></div>
       </section>
       <section class="view" id="view-history">
-        <div class="heading"><div><h2>Histórico</h2><p class="muted" id="chart-title">Selecione uma métrica de um servidor</p></div>
-          <label>Período<select id="days"><option value="1">24 horas</option><option value="7">7 dias</option><option value="30">30 dias</option><option value="90">90 dias</option><option value="365">365 dias</option></select></label>
+        <div class="heading">
+          <div><h2>Histórico de infraestrutura</h2><p class="muted">Séries oficiais do Zabbix; prévia local a partir do PostgreSQL</p></div>
+          <div class="toolbar">
+            <label>Servidor<select id="history-host" aria-label="Selecionar host para histórico"><option value="">Aguardando servidores</option></select></label>
+            <label>Período<select id="days"><option value="1">24 horas</option><option value="7">7 dias</option><option value="30">30 dias</option><option value="90">90 dias</option><option value="365">365 dias</option></select></label>
+            <button type="button" class="btn secondary" id="refresh-history">↻ Sincronizar Zabbix</button>
+          </div>
         </div>
-        <div class="card"><div class="chartbox"><canvas id="chart"></canvas></div><p class="status" id="chart-status"></p></div>
+        <div class="history-legend">
+          <span><i class="threshold-dot normal"></i> Normal &lt;80%</span>
+          <span><i class="threshold-dot warning"></i> Atenção ≥80%</span>
+          <span><i class="threshold-dot critical"></i> Crítico ≥90%</span>
+          <span><i class="threshold-dot maximum"></i> Máximo ≥100%</span>
+        </div>
+        <p class="status" id="chart-status" role="status" aria-live="polite">Selecione um servidor; amostras locais aparecem primeiro, seguidas pelo histórico oficial.</p>
+        <div class="history-grid">
+          <article class="card history-card"><div class="chart-header"><h3>CPU</h3><span id="history-badge-cpu" class="metric-status">Aguardando</span></div><div class="chartbox"><canvas id="chart-cpu"></canvas></div><p id="history-message-cpu" class="status">Sem dados carregados.</p></article>
+          <article class="card history-card"><div class="chart-header"><h3>Memória RAM</h3><span id="history-badge-memory" class="metric-status">Aguardando</span></div><div class="chartbox"><canvas id="chart-memory"></canvas></div><p id="history-message-memory" class="status">Sem dados carregados.</p></article>
+          <article class="card history-card"><div class="chart-header"><h3>GPU</h3><span id="history-badge-gpu" class="metric-status">Aguardando</span></div><div class="chartbox"><canvas id="chart-gpu"></canvas></div><p id="history-message-gpu" class="status">Sem dados carregados.</p></article>
+          <article class="card history-card"><div class="chart-header"><h3>Rede RX / TX</h3><span id="history-badge-network" class="metric-status">Aguardando</span></div><div class="chartbox"><canvas id="chart-network"></canvas></div><p id="history-message-network" class="status">Sem dados carregados.</p></article>
+        </div>
+        <p class="muted history-footnote">CPU/RAM/GPU usam limites percentuais. Rede usa Mbps e só aplica limites percentuais quando a velocidade da interface estiver disponível no Zabbix. Sem coleta ou retenção, o gráfico informa a ausência de dados.</p>
       </section>
       <section class="view" id="view-settings">
         <div class="heading"><div><h2>Configurações de integração</h2>
