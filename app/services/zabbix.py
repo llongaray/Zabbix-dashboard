@@ -116,8 +116,17 @@ def verify_token(candidate):
     )
     if not isinstance(hosts_result, list):
         raise ZabbixError("Resposta host.get inesperada.")
-    return {"validated": True, "latency_ms": round((time.monotonic() - started)*1000),
-            "host_accessible": bool(hosts_result)}
+    latency = round((time.monotonic() - started) * 1000)
+    try:
+        version = api_version()
+    except ZabbixError:
+        version = None  # Falha em apiinfo.version não invalida um token já verificado.
+    return {
+        "validated": True,
+        "latency_ms": latency,
+        "host_accessible": bool(hosts_result),
+        "version": version,
+    }
 
 
 def api_version():
