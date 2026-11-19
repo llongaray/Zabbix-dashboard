@@ -1,7 +1,8 @@
-"""Único ponto de entrada da aplicação."""
+"""Único orquestrador Python da aplicação."""
 from app import create_app
+from app.realtime import socketio
 
 app = create_app()
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000)
+    socketio.run(app, host="127.0.0.1", port=5000, debug=False)
