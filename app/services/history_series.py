@@ -140,6 +140,17 @@ def host_series(host_id, kind, days):
             item = next((i for i in items if str(i.get("itemid")) ==
                          str(outgoing.get("itemid"))), None)
             speed = link_capacity(items, item)
+    # Não aplica a velocidade de uma interface à série de outra interface.
+    if kind == "network" and gauges.get("network_in") and gauges.get("network_out"):
+        def selected_interface(metric_kind):
+            selected = gauges[metric_kind]
+            item = next((i for i in items if str(i.get("itemid")) ==
+                         str(selected.get("itemid"))), None)
+            return interface_name(str(item.get("key_"))) if item else None
+        first = selected_interface("network_in")
+        second = selected_interface("network_out")
+        if first != second:
+            speed = None
     return {
         "kind": kind, "title": METRICS[kind][0], "hostid": str(host_id),
         "units": METRICS[kind][1], "series": output,
