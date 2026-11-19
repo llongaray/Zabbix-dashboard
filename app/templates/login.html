@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#17132e">
+  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+  <title>Entrar | Zabbix Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/siga-ds.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+</head>
+<body>
+  <main class="login">
+    <section class="intro" aria-labelledby="intro-title">
+      <div>
+        <p class="brand">Zabbix Dashboard</p>
+        <h1 id="intro-title">Monitore sua infraestrutura em um só lugar.</h1>
+        <p>Acompanhe servidores, problemas ativos e o histórico de métricas coletadas pelo Zabbix.</p>
+      </div>
+    </section>
+    <section class="access" aria-labelledby="login-title">
+      <div>
+        <span class="siga-badge siga-badge--primary">Área restrita</span>
+        <h2 id="login-title">Acesso ao dashboard</h2>
+        {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+        <form method="post" action="{{ url_for('dashboard.login') }}">
+          <label class="siga-field__label" for="password">Senha administrativa</label>
+          <div class="password">
+            <input class="siga-input" id="password" name="password" type="password" autocomplete="current-password" required autofocus>
+            <button class="siga-button siga-button--secondary" type="button" id="toggle" aria-controls="password">Mostrar senha</button>
+          </div>
+          <button class="siga-button siga-button--primary siga-button--block" type="submit">Entrar</button>
+        </form>
+      </div>
+    </section>
+  </main>
+  <script>
+    const toggle = document.querySelector('#toggle');
+    const password = document.querySelector('#password');
+    toggle.addEventListener('click', () => {
+      const show = password.type === 'password';
+      password.type = show ? 'text' : 'password';
+      toggle.textContent = show ? 'Ocultar senha' : 'Mostrar senha';
+    });
+  </script>
+</body>
+</html>

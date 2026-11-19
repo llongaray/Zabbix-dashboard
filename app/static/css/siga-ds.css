@@ -1,0 +1,675 @@
+/* SIGA DS 0.3.0 · Avansat Tecnologias */
+@layer tokens {
+  :root {
+    /* Brand */
+    --siga-purple-50: #f7f2ff;
+    --siga-purple-100: #efe6ff;
+    --siga-purple-200: #dfceff;
+    --siga-purple-300: #c6a8ff;
+    --siga-purple-400: #a77bff;
+    --siga-purple-500: #8848fa;
+    --siga-purple-600: #6d28d9;
+    --siga-purple-700: #5b21b6;
+    --siga-purple-800: #4c1d95;
+    --siga-purple-900: #36156a;
+    --siga-purple-950: #220b48;
+
+    /* Neutral */
+    --siga-neutral-0: #ffffff;
+    --siga-neutral-25: #fcfbfe;
+    --siga-neutral-50: #f7f7fb;
+    --siga-neutral-100: #f0eef5;
+    --siga-neutral-200: #e3dfe9;
+    --siga-neutral-300: #d1cbd9;
+    --siga-neutral-400: #a9a2b8;
+    --siga-neutral-500: #7d758d;
+    --siga-neutral-600: #625b70;
+    --siga-neutral-700: #464052;
+    --siga-neutral-800: #2a2536;
+    --siga-neutral-900: #17132e;
+    --siga-neutral-950: #0e0a1c;
+
+    /* Feedback */
+    --siga-green-50: #eafaf4;
+    --siga-green-100: #d1f4e7;
+    --siga-green-500: #0f9f75;
+    --siga-green-700: #08795b;
+    --siga-green-900: #07513e;
+    --siga-amber-50: #fff7e6;
+    --siga-amber-100: #ffedc2;
+    --siga-amber-500: #d97706;
+    --siga-amber-700: #a44900;
+    --siga-amber-900: #713200;
+    --siga-red-50: #fff0f2;
+    --siga-red-100: #ffdce1;
+    --siga-red-500: #d63c52;
+    --siga-red-700: #b42335;
+    --siga-red-900: #771927;
+    --siga-blue-50: #edf6ff;
+    --siga-blue-100: #d8ebff;
+    --siga-blue-500: #2f7dd3;
+    --siga-blue-700: #1f5caa;
+    --siga-blue-900: #173e70;
+
+    /* Data visualization */
+    --siga-data-purple: #6d28d9;
+    --siga-data-cyan: #008b95;
+    --siga-data-amber: #d97706;
+    --siga-data-red: #c53048;
+    --siga-data-green: #218c5a;
+    --siga-data-blue: #3478d4;
+
+    /* Typography */
+    --siga-font-sans: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --siga-font-mono: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+    --siga-font-size-2xs: 0.6875rem;
+    --siga-font-size-xs: 0.75rem;
+    --siga-font-size-sm: 0.8125rem;
+    --siga-font-size-md: 0.875rem;
+    --siga-font-size-lg: 1rem;
+    --siga-font-size-xl: 1.125rem;
+    --siga-font-size-2xl: 1.25rem;
+    --siga-font-size-3xl: 1.5rem;
+    --siga-line-tight: 1.2;
+    --siga-line-normal: 1.45;
+    --siga-line-relaxed: 1.55;
+    --siga-weight-regular: 400;
+    --siga-weight-medium: 500;
+    --siga-weight-semibold: 600;
+    --siga-weight-bold: 700;
+
+    /* Spacing: base 4 px */
+    --siga-space-0: 0;
+    --siga-space-1: 0.25rem;
+    --siga-space-2: 0.5rem;
+    --siga-space-3: 0.75rem;
+    --siga-space-4: 1rem;
+    --siga-space-5: 1.25rem;
+    --siga-space-6: 1.5rem;
+    --siga-space-8: 2rem;
+    --siga-space-10: 2.5rem;
+    --siga-space-12: 3rem;
+    --siga-space-16: 4rem;
+
+    /* Shape */
+    --siga-radius-xs: 0.25rem;
+    --siga-radius-sm: 0.375rem;
+    --siga-radius-md: 0.625rem;
+    --siga-radius-lg: 0.875rem;
+    --siga-radius-xl: 1.25rem;
+    --siga-radius-full: 9999px;
+    --siga-border-width: 1px;
+    --siga-border-width-strong: 2px;
+
+    /* Elevation */
+    --siga-shadow-xs: 0 1px 2px rgb(23 19 46 / 0.08);
+    --siga-shadow-sm: 0 2px 8px rgb(23 19 46 / 0.1);
+    --siga-shadow-md: 0 8px 24px rgb(23 19 46 / 0.14);
+    --siga-shadow-lg: 0 16px 40px rgb(23 19 46 / 0.18);
+
+    /* Motion */
+    --siga-duration-fast: 120ms;
+    --siga-duration-normal: 200ms;
+    --siga-duration-slow: 320ms;
+    --siga-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+    /* Layering */
+    --siga-z-dropdown: 1000;
+    --siga-z-sticky: 1100;
+    --siga-z-modal: 1200;
+    --siga-z-toast: 1300;
+
+    /* Component density */
+    --siga-control-height-sm: 2rem;
+    --siga-control-height-md: 2.25rem;
+    --siga-control-height-lg: 2.5rem;
+    --siga-control-padding-inline: 0.75rem;
+    --siga-control-gap: 0.375rem;
+    --siga-control-font-size: var(--siga-font-size-md);
+
+    /* Accessible target size for invisible handles and touch interactions */
+    --siga-target-min: 2.75rem;
+  }
+
+  @media (pointer: coarse) {
+    :root {
+      --siga-control-height-sm: 2.75rem;
+      --siga-control-height-md: 2.75rem;
+      --siga-control-height-lg: 3rem;
+      --siga-control-font-size: 1rem;
+    }
+  }
+}
+
+@layer tokens {
+  :root {
+    --siga-form-field-gap: var(--siga-space-3);
+    --siga-form-section-gap: var(--siga-space-4);
+    --siga-form-action-gap: var(--siga-space-2);
+  }
+
+  :root,
+  :root[data-theme="light"] {
+    color-scheme: light;
+
+    --siga-color-canvas: #f7f7fb;
+    --siga-color-surface: #ffffff;
+    --siga-color-surface-subtle: #f0eef5;
+    --siga-color-surface-raised: #ffffff;
+    --siga-color-surface-inverse: #17132e;
+    --siga-color-overlay: rgb(14 10 28 / 0.56);
+
+    --siga-color-text: #17132e;
+    --siga-color-text-secondary: #575064;
+    --siga-color-text-tertiary: #6b6478;
+    --siga-color-text-disabled: #8f899a;
+    --siga-color-text-inverse: #ffffff;
+
+    --siga-color-border: #d8d4e2;
+    --siga-color-border-strong: #a9a2b8;
+    --siga-color-border-disabled: #e3dfe9;
+
+    --siga-color-primary: #6d28d9;
+    --siga-color-primary-hover: #5b21b6;
+    --siga-color-primary-active: #4c1d95;
+    --siga-color-on-primary: #ffffff;
+    --siga-color-primary-subtle: #efe6ff;
+    --siga-color-on-primary-subtle: #4c1d95;
+
+    --siga-color-link: #5b21b6;
+    --siga-color-link-hover: #4c1d95;
+    --siga-color-focus: #6d28d9;
+    --siga-color-focus-offset: #ffffff;
+
+    --siga-color-success: #08795b;
+    --siga-color-success-subtle: #eafaf4;
+    --siga-color-on-success: #ffffff;
+    --siga-color-on-success-subtle: #07513e;
+    --siga-color-warning: #a44900;
+    --siga-color-warning-subtle: #fff7e6;
+    --siga-color-on-warning: #ffffff;
+    --siga-color-on-warning-subtle: #713200;
+    --siga-color-danger: #b42335;
+    --siga-color-danger-hover: #971d2d;
+    --siga-color-danger-subtle: #fff0f2;
+    --siga-color-on-danger: #ffffff;
+    --siga-color-on-danger-subtle: #771927;
+    --siga-color-info: #1f5caa;
+    --siga-color-info-subtle: #edf6ff;
+    --siga-color-on-info: #ffffff;
+    --siga-color-on-info-subtle: #173e70;
+
+    --siga-color-control-bg: #ffffff;
+    --siga-color-control-hover: #f7f2ff;
+    --siga-color-control-disabled: #f0eef5;
+    --siga-color-placeholder: #736c80;
+
+    --siga-shadow-surface: var(--siga-shadow-sm);
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+
+    --siga-color-canvas: #0e0a1c;
+    --siga-color-surface: #171226;
+    --siga-color-surface-subtle: #211a34;
+    --siga-color-surface-raised: #2a2040;
+    --siga-color-surface-inverse: #f8f7fc;
+    --siga-color-overlay: rgb(0 0 0 / 0.72);
+
+    --siga-color-text: #f8f7fc;
+    --siga-color-text-secondary: #d0cada;
+    --siga-color-text-tertiary: #afa8bd;
+    --siga-color-text-disabled: #756d86;
+    --siga-color-text-inverse: #17132e;
+
+    --siga-color-border: #3b3150;
+    --siga-color-border-strong: #625477;
+    --siga-color-border-disabled: #302741;
+
+    --siga-color-primary: #b69afb;
+    --siga-color-primary-hover: #c6afff;
+    --siga-color-primary-active: #a78bfa;
+    --siga-color-on-primary: #220b48;
+    --siga-color-primary-subtle: #352257;
+    --siga-color-on-primary-subtle: #eadfff;
+
+    --siga-color-link: #c6afff;
+    --siga-color-link-hover: #dfceff;
+    --siga-color-focus: #c6afff;
+    --siga-color-focus-offset: #0e0a1c;
+
+    --siga-color-success: #65d6b0;
+    --siga-color-success-subtle: #123b31;
+    --siga-color-on-success: #06241a;
+    --siga-color-on-success-subtle: #bff4e1;
+    --siga-color-warning: #ffca64;
+    --siga-color-warning-subtle: #47320d;
+    --siga-color-on-warning: #362000;
+    --siga-color-on-warning-subtle: #ffe4a1;
+    --siga-color-danger: #ff98a5;
+    --siga-color-danger-hover: #ffb4bd;
+    --siga-color-danger-subtle: #4c2029;
+    --siga-color-on-danger: #3c0710;
+    --siga-color-on-danger-subtle: #ffd1d7;
+    --siga-color-info: #8ec5ff;
+    --siga-color-info-subtle: #173653;
+    --siga-color-on-info: #082443;
+    --siga-color-on-info-subtle: #cfe6ff;
+
+    --siga-color-control-bg: #171226;
+    --siga-color-control-hover: #2a2040;
+    --siga-color-control-disabled: #211a34;
+    --siga-color-placeholder: #aaa3b8;
+
+    --siga-shadow-surface: 0 8px 24px rgb(0 0 0 / 0.36);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) {
+      color-scheme: dark;
+
+      --siga-color-canvas: #0e0a1c;
+      --siga-color-surface: #171226;
+      --siga-color-surface-subtle: #211a34;
+      --siga-color-surface-raised: #2a2040;
+      --siga-color-surface-inverse: #f8f7fc;
+      --siga-color-overlay: rgb(0 0 0 / 0.72);
+      --siga-color-text: #f8f7fc;
+      --siga-color-text-secondary: #d0cada;
+      --siga-color-text-tertiary: #afa8bd;
+      --siga-color-text-disabled: #756d86;
+      --siga-color-text-inverse: #17132e;
+      --siga-color-border: #3b3150;
+      --siga-color-border-strong: #625477;
+      --siga-color-border-disabled: #302741;
+      --siga-color-primary: #b69afb;
+      --siga-color-primary-hover: #c6afff;
+      --siga-color-primary-active: #a78bfa;
+      --siga-color-on-primary: #220b48;
+      --siga-color-primary-subtle: #352257;
+      --siga-color-on-primary-subtle: #eadfff;
+      --siga-color-link: #c6afff;
+      --siga-color-link-hover: #dfceff;
+      --siga-color-focus: #c6afff;
+      --siga-color-focus-offset: #0e0a1c;
+      --siga-color-success: #65d6b0;
+      --siga-color-success-subtle: #123b31;
+      --siga-color-on-success: #06241a;
+      --siga-color-on-success-subtle: #bff4e1;
+      --siga-color-warning: #ffca64;
+      --siga-color-warning-subtle: #47320d;
+      --siga-color-on-warning: #362000;
+      --siga-color-on-warning-subtle: #ffe4a1;
+      --siga-color-danger: #ff98a5;
+      --siga-color-danger-hover: #ffb4bd;
+      --siga-color-danger-subtle: #4c2029;
+      --siga-color-on-danger: #3c0710;
+      --siga-color-on-danger-subtle: #ffd1d7;
+      --siga-color-info: #8ec5ff;
+      --siga-color-info-subtle: #173653;
+      --siga-color-on-info: #082443;
+      --siga-color-on-info-subtle: #cfe6ff;
+      --siga-color-control-bg: #171226;
+      --siga-color-control-hover: #2a2040;
+      --siga-color-control-disabled: #211a34;
+      --siga-color-placeholder: #aaa3b8;
+      --siga-shadow-surface: 0 8px 24px rgb(0 0 0 / 0.36);
+    }
+  }
+}
+
+@layer atoms {
+  .siga-button,
+  .siga-icon-button {
+    position: relative;
+    display: inline-flex;
+    min-height: var(--siga-control-height-md);
+    align-items: center;
+    justify-content: center;
+    border: var(--siga-border-width) solid transparent;
+    border-radius: var(--siga-radius-md);
+    cursor: pointer;
+    font-weight: var(--siga-weight-semibold);
+    line-height: 1;
+    text-decoration: none;
+    touch-action: manipulation;
+    transition:
+      background-color var(--siga-duration-fast) var(--siga-ease-standard),
+      border-color var(--siga-duration-fast) var(--siga-ease-standard),
+      color var(--siga-duration-fast) var(--siga-ease-standard),
+      transform var(--siga-duration-fast) var(--siga-ease-standard);
+    user-select: none;
+  }
+
+  .siga-button {
+    gap: var(--siga-control-gap);
+    min-width: 4.5rem;
+    padding: var(--siga-space-2) 0.875rem;
+    font-size: var(--siga-font-size-sm);
+  }
+
+  .siga-button:hover:not(:disabled, [aria-disabled="true"]),
+  .siga-icon-button:hover:not(:disabled, [aria-disabled="true"]) {
+    transform: translateY(-1px);
+  }
+
+  .siga-button:active:not(:disabled, [aria-disabled="true"]),
+  .siga-icon-button:active:not(:disabled, [aria-disabled="true"]) {
+    transform: translateY(0);
+  }
+
+  .siga-button:disabled,
+  .siga-button[aria-disabled="true"],
+  .siga-icon-button:disabled,
+  .siga-icon-button[aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: 0.52;
+  }
+
+  .siga-button--primary {
+    background: var(--siga-color-primary);
+    color: var(--siga-color-on-primary);
+  }
+
+  .siga-button--primary:hover:not(:disabled, [aria-disabled="true"]) {
+    background: var(--siga-color-primary-hover);
+  }
+
+  .siga-button--primary:active:not(:disabled, [aria-disabled="true"]) {
+    background: var(--siga-color-primary-active);
+  }
+
+  .siga-button--secondary {
+    border-color: var(--siga-color-border-strong);
+    background: var(--siga-color-surface);
+    color: var(--siga-color-text);
+  }
+
+  .siga-button--secondary:hover:not(:disabled, [aria-disabled="true"]),
+  .siga-button--ghost:hover:not(:disabled, [aria-disabled="true"]),
+  .siga-icon-button:hover:not(:disabled, [aria-disabled="true"]) {
+    background: var(--siga-color-control-hover);
+  }
+
+  .siga-button--ghost,
+  .siga-icon-button {
+    background: transparent;
+    color: var(--siga-color-link);
+  }
+
+  .siga-button--danger {
+    background: var(--siga-color-danger);
+    color: var(--siga-color-on-danger);
+  }
+
+  .siga-button--danger:hover:not(:disabled, [aria-disabled="true"]) {
+    background: var(--siga-color-danger-hover);
+  }
+
+  .siga-button--sm {
+    min-height: var(--siga-control-height-sm);
+    padding: 0.375rem 0.625rem;
+    font-size: var(--siga-font-size-xs);
+  }
+
+  .siga-button--lg {
+    min-height: var(--siga-control-height-lg);
+    padding-inline: var(--siga-space-4);
+    font-size: var(--siga-font-size-md);
+  }
+
+  .siga-button--block { width: 100%; }
+
+  .siga-icon-button {
+    width: var(--siga-control-height-md);
+    height: var(--siga-control-height-md);
+    padding: 0;
+  }
+
+  .siga-icon-button--sm {
+    width: var(--siga-control-height-sm);
+    min-height: var(--siga-control-height-sm);
+    height: var(--siga-control-height-sm);
+  }
+
+  .siga-icon-button--outlined {
+    border-color: var(--siga-color-border);
+    background: var(--siga-color-surface);
+    color: var(--siga-color-text-secondary);
+  }
+
+  @media (forced-colors: active) {
+    .siga-button,
+    .siga-icon-button {
+      border-color: ButtonText;
+    }
+  }
+}
+
+@layer atoms {
+  .siga-field {
+    display: grid;
+    align-content: start;
+    grid-template-rows: auto auto minmax(1.125rem, auto);
+    gap: 0;
+    width: 100%;
+  }
+
+  .siga-field:not(:has(.siga-field__hint, .siga-field__message)) { grid-template-rows: auto auto; }
+
+  .siga-field__label {
+    margin: 0 0 var(--siga-control-gap);
+    color: var(--siga-color-text);
+    font-size: var(--siga-font-size-sm);
+    font-weight: var(--siga-weight-semibold);
+    line-height: 1rem;
+  }
+
+  .siga-field__required {
+    color: var(--siga-color-danger);
+  }
+
+  .siga-field__hint,
+  .siga-field__message {
+    min-width: 0;
+    margin: 0;
+    padding-top: var(--siga-space-1);
+    font-size: var(--siga-font-size-2xs);
+    line-height: 0.875rem;
+    overflow-wrap: anywhere;
+  }
+
+  .siga-field__hint {
+    color: color-mix(
+      in srgb,
+      var(--siga-color-text) 78%,
+      var(--siga-color-text-secondary)
+    );
+    font-weight: var(--siga-weight-regular);
+  }
+
+  .siga-field__message,
+  .siga-field__message--error {
+    color: var(--siga-color-danger);
+    font-weight: var(--siga-weight-bold);
+  }
+
+  .siga-field__control {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .siga-input,
+  .siga-select,
+  .siga-textarea {
+    width: 100%;
+    border: var(--siga-border-width) solid var(--siga-color-border-strong);
+    border-radius: var(--siga-radius-md);
+    background: var(--siga-color-control-bg);
+    color: var(--siga-color-text);
+    font-size: var(--siga-control-font-size);
+    transition:
+      border-color var(--siga-duration-fast) var(--siga-ease-standard),
+      box-shadow var(--siga-duration-fast) var(--siga-ease-standard),
+      background-color var(--siga-duration-fast) var(--siga-ease-standard);
+  }
+
+  .siga-input,
+  .siga-select {
+    min-height: var(--siga-control-height-md);
+    padding: 0.375rem var(--siga-control-padding-inline);
+  }
+
+  .siga-textarea {
+    min-height: 6rem;
+    padding: var(--siga-space-2) var(--siga-control-padding-inline);
+    line-height: var(--siga-line-normal);
+    resize: vertical;
+  }
+
+  .siga-input::placeholder,
+  .siga-textarea::placeholder {
+    color: var(--siga-color-placeholder);
+    opacity: 1;
+  }
+
+  .siga-input:hover:not(:disabled),
+  .siga-select:hover:not(:disabled),
+  .siga-textarea:hover:not(:disabled) {
+    border-color: var(--siga-color-primary);
+  }
+
+  .siga-input:focus-visible,
+  .siga-select:focus-visible,
+  .siga-textarea:focus-visible {
+    border-color: var(--siga-color-primary);
+    outline: 3px solid var(--siga-color-focus);
+    outline-offset: 2px;
+  }
+
+  .siga-input[aria-invalid="true"],
+  .siga-select[aria-invalid="true"],
+  .siga-textarea[aria-invalid="true"] {
+    border-color: var(--siga-color-danger);
+    box-shadow: inset 0 0 0 1px var(--siga-color-danger);
+  }
+
+  .siga-input:disabled,
+  .siga-select:disabled,
+  .siga-textarea:disabled {
+    border-color: var(--siga-color-border-disabled);
+    background: var(--siga-color-control-disabled);
+    color: var(--siga-color-text-disabled);
+    cursor: not-allowed;
+  }
+
+  .siga-select {
+    padding-right: 2.25rem;
+  }
+
+  .siga-field__icon {
+    position: absolute;
+    z-index: 1;
+    left: 0.625rem;
+    color: var(--siga-color-text-secondary);
+    pointer-events: none;
+  }
+
+  .siga-field__control--leading .siga-input { padding-left: 2.25rem; }
+
+  .siga-field__action {
+    position: absolute;
+    right: calc((var(--siga-control-height-md) - var(--siga-control-height-sm)) / 2);
+  }
+
+  .siga-field__action:focus-visible { outline-offset: -4px; }
+
+  .siga-field__control--trailing .siga-input {
+    padding-right: calc(var(--siga-control-height-sm) + var(--siga-space-2));
+  }
+
+  .siga-fieldset {
+    display: grid;
+    gap: 0.125rem;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .siga-fieldset__legend {
+    margin: 0;
+    padding: 0;
+    font-size: var(--siga-font-size-sm);
+    font-weight: var(--siga-weight-semibold);
+    line-height: 1rem;
+  }
+}
+
+@layer atoms {
+  .siga-badge {
+    display: inline-flex;
+    min-height: 1.25rem;
+    gap: var(--siga-space-1);
+    align-items: center;
+    justify-content: center;
+    padding: 0.125rem var(--siga-space-2);
+    border: var(--siga-border-width) solid transparent;
+    border-radius: var(--siga-radius-full);
+    background: var(--siga-color-surface-subtle);
+    color: var(--siga-color-text-secondary);
+    font-size: var(--siga-font-size-xs);
+    font-weight: var(--siga-weight-semibold);
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .siga-badge--primary {
+    background: var(--siga-color-primary-subtle);
+    color: var(--siga-color-on-primary-subtle);
+  }
+
+  .siga-badge--success {
+    background: var(--siga-color-success-subtle);
+    color: var(--siga-color-on-success-subtle);
+  }
+
+  .siga-badge--warning {
+    background: var(--siga-color-warning-subtle);
+    color: var(--siga-color-on-warning-subtle);
+  }
+
+  .siga-badge--danger {
+    background: var(--siga-color-danger-subtle);
+    color: var(--siga-color-on-danger-subtle);
+  }
+
+  .siga-badge--info {
+    background: var(--siga-color-info-subtle);
+    color: var(--siga-color-on-info-subtle);
+  }
+
+  .siga-badge__dot {
+    width: 0.375rem;
+    height: 0.375rem;
+    border-radius: var(--siga-radius-full);
+    background: currentColor;
+  }
+
+  .siga-count-badge {
+    display: inline-grid;
+    min-width: 1.125rem;
+    height: 1.125rem;
+    place-items: center;
+    padding-inline: 0.3125rem;
+    border: 2px solid var(--siga-color-surface);
+    border-radius: var(--siga-radius-full);
+    background: var(--siga-color-danger);
+    color: var(--siga-color-on-danger);
+    font-size: var(--siga-font-size-2xs);
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--siga-weight-bold);
+    line-height: 1;
+  }
+}

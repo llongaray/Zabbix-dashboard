@@ -1,0 +1,43 @@
+﻿* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--siga-color-surface);
+  color: var(--siga-color-text);
+  font-family: var(--siga-font-sans);
+  line-height: var(--siga-line-normal);
+}
+.login {
+  display: grid;
+  grid-template-columns: 45% minmax(0, 1fr);
+  min-height: 100vh;
+}
+.intro, .access {
+  display: grid;
+  align-items: center;
+  padding: clamp(1.5rem, 6vw, 6rem);
+}
+.intro {
+  background: linear-gradient(140deg, var(--siga-purple-950), var(--siga-neutral-900));
+  color: var(--siga-neutral-0);
+}
+.intro .brand { color: var(--siga-purple-200); font-weight: 700; }
+.intro h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 4rem);
+  line-height: 1.08;
+  letter-spacing: -.045em;
+}
+.intro p:last-child { max-width: 36ch; }
+.access > div { width: 100%; max-width: 34rem; margin: auto; }
+.access h2 { margin-block: 1rem 1.5rem; font-size: clamp(1.75rem, 3vw, 2.75rem); }
+.access form { display: grid; gap: .75rem; }
+.password { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .5rem; }
+.error {
+  padding: var(--siga-space-3);
+  border-radius: var(--siga-radius-md);
+  background: var(--siga-color-danger-subtle);
+  color: var(--siga-color-on-danger-subtle);
+}
+@media (max-width: 720px) {
+  .login { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+}
