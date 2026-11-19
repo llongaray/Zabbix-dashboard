@@ -1,1 +1,54 @@
-'use strict';let hosts=[],currentHost=null,currentItem=null,chart=null;const $=s=>document.querySelector(s);const $$=s=>document.querySelectorAll(s);function status(id,msg){$(id).textContent=msg}function view(name){$$('.view').forEach(el=>el.classList.toggle('active',el.id==='view-'+name));$$('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===name))}$$('[data-view]').forEach(b=>b.addEventListener('click',()=>view(b.dataset.view)));$$('[data-go]').forEach(b=>b.addEventListener('click',()=>view(b.dataset.go)));async function api(path,options={}){let r=await fetch(path,{credentials:'same-origin',...options});let text=await r.text();let data;try{data=JSON.parse(text)}catch{throw Error('Resposta inesperada do servidor (HTTP '+r.status+'). Verifique os logs do Flask.')}if(r.status===401 && data.code==='SESSION_EXPIRED'){throw Error('Sessão administrativa não reconhecida nesta requisição (HTTP 401). Faça login novamente e verifique os cookies do navegador.')}if(!r.ok)throw Error(data.error||'Falha HTTP '+r.status);return data}function button(label,fn,cls='tab'){let b=document.createElement('button');b.className=cls;b.textContent=label;b.addEventListener('click',fn);return b}async function load(){try{await api('/api/session');let cfg=await api('/api/config');$('#url').value=cfg.zabbix_url||'';hosts=await api('/api/hosts');$('#connection').textContent='● Zabbix conectado';$('#total-hosts').textContent=hosts.length;$('#enabled-hosts').textContent=hosts.filter(h=>h.status==='0').length;$('#updated').textContent=new Date().toLocaleTimeString('pt-BR');for(let id of ['#server-tabs','#overview-hosts']){$(id).replaceChildren();hosts.forEach(h=>$(id).append(button(h.name||h.host,()=>selectHost(h))))}if(hosts.length)await selectHost(hosts[0]);else status('#overview-status','Nenhum host disponível para este token.')}catch(e){$('#connection').textContent='● Conexão indisponível';status('#overview-status',e.message);$('#total-hosts').textContent='—';status('#server-status',e.message)}}async function selectHost(host){currentHost=host;$('#selected-host').textContent=host.name||host.host;$$('.tabs .tab').forEach(b=>b.classList.toggle('active',b.textContent===(host.name||host.host)));try{let items=await api('/api/hosts/'+encodeURIComponent(host.hostid)+'/items');$('#total-items').textContent=items.length;$('#overview-summary').textContent=(host.name||host.host)+' · '+items.length+' itens disponíveis';let body=$('#items');body.replaceChildren();if(!items.length){let tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=3;td.textContent='Nenhum item habilitado encontrado.';tr.append(td);body.append(tr)}items.forEach(item=>{let tr=document.createElement('tr');let n=document.createElement('td');n.textContent=item.name;let v=document.createElement('td');v.textContent=(item.lastvalue??'—')+' '+(item.units||'');let a=document.createElement('td');if(['0','3'].includes(String(item.value_type))){a.append(button('Ver gráfico',()=>plot(item),'btn secondary'))}else{a.textContent='Não numérico'}tr.append(n,v,a);body.append(tr)});status('#server-status','')}catch(e){status('#server-status',e.message)}}async function plot(item){currentItem=item;view('history');$('#chart-title').textContent=item.name;status('#chart-status','Carregando histórico...');try{let days=$('#days').value;let data=await api('/api/history/'+encodeURIComponent(item.itemid)+'?days='+days+'&value_type='+item.value_type);let points=data.points||[];if(chart)chart.destroy();if(!points.length){status('#chart-status','Sem dados históricos disponíveis para este período.');return}if(typeof Chart==='undefined')throw Error('Biblioteca Chart.js indisponível');chart=new Chart($('#chart'),{type:'line',data:{labels:points.map(p=>new Date(Number(p.clock)*1000).toLocaleString('pt-BR')),datasets:[{label:item.name,data:points.map(p=>Number(p.value_avg??p.value)),borderColor:'#a96bff',backgroundColor:'rgba(169,107,255,.12)',fill:true,tension:.28,pointRadius:0,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#dfe5ff'}}},scales:{x:{ticks:{color:'#8997bc',maxTicksLimit:8},grid:{color:'#2a3554'}},y:{ticks:{color:'#8997bc'},grid:{color:'#2a3554'}}}}});status('#chart-status',points.length+' registros · '+data.source)}catch(e){status('#chart-status',e.message)}}$('#days').addEventListener('change',()=>{if(currentItem)plot(currentItem)});$('#refresh').addEventListener('click',load);$('#settings-form').addEventListener('submit',async e=>{e.preventDefault();try{await api('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({zabbix_url:$('#url').value.trim(),zabbix_token:$('#token').value.trim()})});$('#token').value='';status('#settings-status','Configurações salvas no PostgreSQL. Clique em Atualizar dados para testar a conexão Zabbix.')}catch(err){status('#settings-status',err.message)}});load();
+/** Orquestrador do frontend; lógica distribuída entre módulos reutilizáveis. */
+import {requestJSON} from './api.js';
+import {initializeNavigation, $, setMessage} from './state.js';
+import {initializeHistory, openHistory} from './history.js';
+import {initializeHosts, renderSnapshot, renderItems, showHostError} from './hosts.js';
+import {initializeSettings, loadConfiguration, onTokenValidated,
+  showIntegrationStatus} from './settings.js';
+import {connectStream} from './socket.js';
+
+let stream = null;
+
+async function loadOnce() {
+  try {
+    renderSnapshot(await requestJSON('/api/snapshot'));
+    showIntegrationStatus({connected: true, message: 'Integração respondendo.'});
+  } catch (error) {
+    showIntegrationStatus({connected: false, message: error.message});
+    setMessage('#overview-status', error.message, true);
+  }
+}
+
+function requestRefresh() {
+  if (stream) stream.refresh();
+  else loadOnce();
+}
+
+async function initialize() {
+  initializeNavigation();
+  initializeHistory();
+  initializeHosts({
+    onHistory: openHistory,
+    onWatch: hostid => stream?.watchHost(hostid),
+  });
+  initializeSettings({refresh: requestRefresh});
+
+  const config = await loadConfiguration();
+  stream = connectStream({
+    onConnected: () => requestRefresh(),
+    onSnapshot: renderSnapshot,
+    onHostItems: renderItems,
+    onHostError: showHostError,
+    onIntegration: showIntegrationStatus,
+    onTokenValidated,
+  });
+
+  $('#refresh').addEventListener('click', requestRefresh);
+  if (config.token_configured) await loadOnce();
+  else showIntegrationStatus({
+    connected: false,
+    message: 'Cadastre somente o API Token na aba Configurações.',
+  });
+}
+
+initialize();
