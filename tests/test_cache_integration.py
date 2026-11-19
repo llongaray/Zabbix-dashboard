@@ -21,6 +21,8 @@ def test_postgres_cache_persists_snapshots_and_mini_history():
         "value": 57.2, "units": "%", "lastclock": now,
     }}, {"gpu": {"available": False}})
     assert cache.get("host:777")["gauges"]["cpu"]["value"] == 57.2
+    cache.save_host("778", [], {})
+    assert set(cache.host_summaries(["777", "778", "779"])) == {"777"}
     assert cache.samples("777")["cpu"][0]["value"] == 57.2
     # Reabrir sessão simula um novo request/worker conectado ao mesmo banco.
     assert cache.get("overview") is not None

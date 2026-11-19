@@ -1,6 +1,6 @@
 """Normaliza históricos oficiais do Zabbix para gráficos Chart.js.
 
-CPU, RAM, GPU são percentuais; rede é Mbps. Nenhuma ocupação percentual
+CPU, RAM, disco e GPU são percentuais; rede é Mbps. Nenhuma ocupação percentual
 é estimada para rede sem velocidade nominal da interface monitorada.
 """
 import math
@@ -12,6 +12,7 @@ from app.services import cache, zabbix
 METRICS = {
     "cpu": ("CPU", "%"),
     "memory": ("Memória RAM", "%"),
+    "disk": ("Uso de disco", "%"),
     "gpu": ("GPU", "%"),
     "network": ("Rede RX / TX", "Mbps"),
 }
@@ -88,7 +89,7 @@ def _history(item, kind, days):
                 value = normalized(value, item.get("units", ""))
             if value is None or not math.isfinite(value):
                 continue
-            if kind in ("cpu", "memory", "gpu") and not 0 <= value <= 100:
+            if kind in ("cpu", "memory", "disk", "gpu") and not 0 <= value <= 100:
                 continue
             points.append({"clock": int(point["clock"]), "value": round(value, 4)})
         except (TypeError, ValueError, KeyError):
@@ -132,6 +133,8 @@ def host_series(host_id, kind, days):
             "name": metric_kind, "points": points, "source": source,
             "itemid": str(item["itemid"]),
         })
+        if metric_kind == "disk":
+            output[-1]["label"] = item.get("name") or item["key_"]
         if metric_kind == "network_in":
             speed = link_capacity(items, item)
     if kind == "network" and speed is None:

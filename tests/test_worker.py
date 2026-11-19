@@ -9,21 +9,27 @@ def test_cycle_persists_hosts_and_metrics_without_web_client(monkeypatch):
     monkeypatch.setattr(worker.zabbix, "hosts", lambda: hosts)
     monkeypatch.setattr(worker.zabbix, "items_for_hosts", lambda ids: [
         {"hostid": "101", "itemid": "1", "key_": "system.cpu.util",
-         "value_type": "0", "lastclock": "100", "lastvalue": "50",
-         "status": "0", "units": "%"}
+         "value_type": "0", "lastclock": "100", "lastvalue": "0",
+         "status": "0", "units": "%"},
+        {"hostid": "102", "itemid": "2", "key_": "icmpping",
+         "value_type": "3", "lastclock": "100", "lastvalue": "1", "status": "0"},
     ])
     monkeypatch.setattr(worker.cache, "get", lambda key: None)
     monkeypatch.setattr(worker.cache, "save",
                         lambda key, data: written.update({key: data}))
     monkeypatch.setattr(worker.cache, "save_host",
-                        lambda host, items, gauges, diagnostics:
+                        lambda host, items, gauges, diagnostics, **kwargs:
                         written.update({"host_" + host: (items, gauges, diagnostics)}))
+    monkeypatch.setattr(worker.cache, "host_summaries",
+                        lambda ids: {host: {} for host in ids if written["host_" + host][1]})
     monkeypatch.setattr(worker.cache, "cleanup", lambda *args: None)
     # tick=1 não consulta problem.get, que pode ter latência alta.
     cursor = worker.cycle(cursor=0, tick=1)
     assert cursor == 0
-    assert written["overview"]["kpis"]["hosts"] == 2
-    assert written["host_101"][1]["cpu"]["value"] == 50
+    assert written["overview"]["discovered_host_count"] == 2
+    assert written["overview"]["kpis"]["hosts"] == 1
+    assert written["overview"]["hosts"] == [{**hosts[0], "summary": {}}]
+    assert written["host_101"][1]["cpu"]["value"] == 0
     assert "host_102" in written
     assert written["host_102"][2]["gpu"]["available"] is False
 

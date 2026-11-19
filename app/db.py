@@ -7,6 +7,11 @@ from sqlalchemy.orm import sessionmaker
 Session = None
 
 
+def lock_schema(connection):
+    # Both the web process and collector can initialize a new database.
+    connection.execute(text("SELECT pg_advisory_xact_lock(742019, 1)"))
+
+
 def build_database_url():
     """Preserva caracteres especiais da senha sem interpolação em URL."""
     return URL.create(
@@ -29,10 +34,21 @@ def init_database():
     )
     Session = sessionmaker(bind=engine)
     with engine.begin() as conn:
+        lock_schema(conn)
         conn.execute(text(
             "CREATE TABLE IF NOT EXISTS settings "
             "(name TEXT PRIMARY KEY, value TEXT NOT NULL)"
         ))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS alert_deliveries (
+                event_id TEXT NOT NULL,
+                sender TEXT NOT NULL,
+                recipient TEXT NOT NULL,
+                next_attempt TIMESTAMPTZ NOT NULL,
+                sent BOOLEAN NOT NULL DEFAULT FALSE,
+                PRIMARY KEY (event_id, sender, recipient)
+            )
+        """))
 
 
 def get_setting(name):
@@ -50,3 +66,16 @@ def put_setting(name, value):
                  "ON CONFLICT(name) DO UPDATE SET value=EXCLUDED.value"),
             {"n": name, "v": value},
         )
+
+
+def settings_with_prefix(prefix):
+    with Session() as session:
+        return dict(session.execute(
+            text("SELECT name, value FROM settings WHERE starts_with(name, :prefix)"),
+            {"prefix": prefix},
+        ).all())
+
+
+def delete_setting(name):
+    with Session.begin() as session:
+        session.execute(text("DELETE FROM settings WHERE name=:name"), {"name": name})

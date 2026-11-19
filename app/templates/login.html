@@ -1,6 +1,47 @@
 <!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0c1125"><title>Entrar | Zabbix Dashboard</title><link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}"></head>
-<body><div class="page"><header class="top"><div class="brand"><span class="logo" aria-hidden="true">◈</span><span>Zabbix Dashboard<small>INFRASTRUCTURE</small></span></div></header>
-<main class="main"><section class="card" aria-labelledby="login-title"><div class="icon" aria-hidden="true">⌁</div><h1 id="login-title">Bem-vindo de volta</h1><p class="subtitle">Entre com sua senha administrativa para acessar o monitoramento da infraestrutura.</p>
-{% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
-<form method="post" action="{{ url_for('dashboard.login') }}"><div class="field"><label for="password">Senha administrativa</label><div class="password"><input id="password" name="password" type="password" placeholder="Digite sua senha" autocomplete="current-password" required autofocus minlength="1"><button type="button" id="toggle" aria-label="Mostrar senha" aria-pressed="false">◉</button></div></div><button class="submit" type="submit">Entrar no dashboard →</button></form><p class="note">Acesso restrito · Credenciais protegidas</p></section></main><footer class="footer">Zabbix Dashboard · Flask · PostgreSQL · Docker</footer></div><script>const t=document.querySelector('#toggle'),p=document.querySelector('#password');t.addEventListener('click',()=>{const show=p.type==='password';p.type=show?'text':'password';t.setAttribute('aria-pressed',String(show));t.setAttribute('aria-label',show?'Ocultar senha':'Mostrar senha')})</script></body></html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#17132e">
+  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+  <title>Entrar | Zabbix Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/siga-ds.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+</head>
+<body>
+  <main class="login">
+    <section class="intro" aria-labelledby="intro-title">
+      <div>
+        <p class="brand">Zabbix Dashboard</p>
+        <h1 id="intro-title">Monitore sua infraestrutura em um só lugar.</h1>
+        <p>Acompanhe servidores, problemas ativos e o histórico de métricas coletadas pelo Zabbix.</p>
+      </div>
+    </section>
+    <section class="access" aria-labelledby="login-title">
+      <div>
+        <span class="siga-badge siga-badge--primary">Área restrita</span>
+        <h2 id="login-title">Acesso ao dashboard</h2>
+        {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+        <form method="post" action="{{ url_for('dashboard.login') }}">
+          <label class="siga-field__label" for="password">Senha administrativa</label>
+          <div class="password">
+            <input class="siga-input" id="password" name="password" type="password" autocomplete="current-password" required autofocus>
+            <button class="siga-button siga-button--secondary" type="button" id="toggle" aria-controls="password">Mostrar senha</button>
+          </div>
+          <button class="siga-button siga-button--primary siga-button--block" type="submit">Entrar</button>
+        </form>
+      </div>
+    </section>
+  </main>
+  <script>
+    const toggle = document.querySelector('#toggle');
+    const password = document.querySelector('#password');
+    toggle.addEventListener('click', () => {
+      const show = password.type === 'password';
+      password.type = show ? 'text' : 'password';
+      toggle.textContent = show ? 'Ocultar senha' : 'Mostrar senha';
+    });
+  </script>
+</body>
+</html>

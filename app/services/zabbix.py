@@ -137,6 +137,7 @@ def api_version():
 def hosts():
     return call("host.get", {
         "output": ["hostid", "host", "name", "status"],
+        "selectInventory": ["os", "os_full", "os_short"],
         "sortfield": "host",
     })
 

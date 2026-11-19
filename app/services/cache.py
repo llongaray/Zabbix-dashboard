@@ -9,6 +9,7 @@ import time
 from sqlalchemy import text
 
 from app import db
+from app.services import host_specs
 
 SCHEMA = (
     """CREATE TABLE IF NOT EXISTS monitor_cache (
@@ -32,6 +33,7 @@ SCHEMA = (
 def ensure_schema():
     """Cria tabelas de forma idempotente, sem alterar dados preexistentes."""
     with db.Session.begin() as session:
+        db.lock_schema(session)
         for statement in SCHEMA:
             session.execute(text(statement))
 
@@ -46,8 +48,25 @@ def get(key):
     if row is None:
         return None
     result = dict(row[0])
+    if key.startswith("host:") and not result.get("specs"):
+        result["specs"] = host_specs.specifications(result.get("items", []), None)
     result["cached_at"] = int(row[1])
     return result
+
+
+def host_summaries(host_ids):
+    if not host_ids:
+        return {}
+    with db.Session() as session:
+        rows = session.execute(text("""
+            SELECT cache_key, payload FROM monitor_cache
+            WHERE cache_key = ANY(:keys)
+              AND jsonb_typeof(payload->'gauges') = 'object'
+              AND payload->'gauges' <> '{}'::jsonb
+        """), {"keys": ["host:" + host_id for host_id in host_ids]})
+        now = int(time.time())
+        return {key.removeprefix("host:"): host_specs.overview_summary(payload, now)
+                for key, payload in rows}
 
 
 def save(key, payload):
@@ -63,11 +82,11 @@ def save(key, payload):
     return stamp
 
 
-def save_host(host_id, items, gauges, diagnostics=None):
+def save_host(host_id, items, gauges, diagnostics=None, *, specs=None):
     """Salva inventário e amostras recentes em uma única transação."""
     stamp = int(time.time())
     payload = {"hostid": str(host_id), "items": items, "gauges": gauges,
-               "diagnostics": diagnostics or {}}
+               "diagnostics": diagnostics or {}, "specs": specs or {}}
     with db.Session.begin() as session:
         session.execute(text(
             "INSERT INTO monitor_cache(cache_key, payload, updated_at) "

@@ -1,4 +1,4 @@
-"""Bateria estrutural dos quatro gráficos, sem screenshots frágeis."""
+"""Bateria estrutural dos gráficos de infraestrutura."""
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -6,7 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_four_resource_charts_and_alert_bands():
     html = (ROOT / "app/templates/dashboard.html").read_text(encoding="utf-8")
-    for kind in ("cpu", "memory", "gpu", "network"):
+    for kind in ("cpu", "memory", "disk", "network"):
         assert 'id="chart-' + kind + '"' in html
         assert 'id="history-message-' + kind + '"' in html
     for label in ("Atenção", "Crítico", "Máximo"):

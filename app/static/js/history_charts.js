@@ -2,14 +2,16 @@
 import {setMessage, setText} from './state.js';
 
 const chartObjects = new Map();
+const tokens = getComputedStyle(document.documentElement);
+const color = token => tokens.getPropertyValue('--siga-' + token).trim();
 const COLORS = {
-  cpu: '#a970ff', memory: '#5dbbe9', gpu: '#ed7dc5',
-  network_in: '#6bc2ed', network_out: '#ae79ff',
+  cpu: color('data-purple'), memory: color('data-blue'), disk: color('data-cyan'),
+  network_in: color('data-blue'), network_out: color('data-purple'),
 };
 const SEVERITY = [
-  {level: 80, name: 'Atenção', color: '#e9b963'},
-  {level: 90, name: 'Crítico', color: '#f48083'},
-  {level: 100, name: 'Máximo', color: '#e6506d'},
+  {level: 80, name: 'Atenção', color: color('color-warning')},
+  {level: 90, name: 'Crítico', color: color('color-danger')},
+  {level: 100, name: 'Máximo', color: color('red-900')},
 ];
 
 function severity(pct) {
@@ -23,6 +25,7 @@ function severity(pct) {
 function normalizedSeries(rows) {
   return (rows || []).map(series => ({
     name: String(series.name || ''),
+    label: series.label,
     points: (series.points || []).filter(point =>
       Number.isFinite(Number(point.value)) &&
       Number.isFinite(Number(point.clock)))
@@ -65,12 +68,12 @@ export function renderMetric(kind, data, sourceLabel) {
   const thresholds = percent ? SEVERITY.map(row =>
     ({...row, value: row.level})) : validCapacity ?
       SEVERITY.map(row => ({...row, value: capacity * row.level / 100})) : [];
-  const datasets = actual.map((row, index) => ({
+  const datasets = actual.map(row => ({
     label: row.name === 'network_in' ? 'Recebido (RX)' :
-      row.name === 'network_out' ? 'Enviado (TX)' : data.title || kind.toUpperCase(),
+      row.name === 'network_out' ? 'Enviado (TX)' : row.label || data.title || kind.toUpperCase(),
     data: row.points,
     parsing: false,
-    borderColor: COLORS[row.name] || COLORS[kind] || '#a970ff',
+    borderColor: COLORS[row.name] || COLORS[kind] || color('data-purple'),
     backgroundColor: 'transparent',
     borderWidth: 2,
     pointRadius: 0,
@@ -110,7 +113,7 @@ export function renderMetric(kind, data, sourceLabel) {
       interaction: {intersect: false, mode: 'nearest'},
       plugins: {
         legend: {
-          labels: {color: '#d5def6', boxWidth: 18, font: {size: 10}},
+          labels: {color: color('color-text'), boxWidth: 18, font: {size: 10}},
         },
         tooltip: {
           callbacks: {
@@ -126,20 +129,20 @@ export function renderMetric(kind, data, sourceLabel) {
       scales: {
         x: {
           type: 'linear',
-          ticks: {color: '#94a2ca', maxTicksLimit: 6,
+          ticks: {color: color('color-text-secondary'), maxTicksLimit: 6,
             callback: value => {
               const date = new Date(Number(value));
               return maxX - minX <= 2 * 86400000 ?
                 date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'}) :
                 date.toLocaleDateString('pt-BR');
             }},
-          grid: {color: '#2e3657'},
+          grid: {color: color('color-border')},
         },
         y: {
           min: 0,
           max: percent ? 100 : undefined,
-          ticks: {color: '#94a2ca', maxTicksLimit: 6},
-          grid: {color: '#2e3657'},
+          ticks: {color: color('color-text-secondary'), maxTicksLimit: 6},
+          grid: {color: color('color-border')},
         },
       },
     },

@@ -5,11 +5,12 @@ consome o PostgreSQL; não consulta o Zabbix ao abrir a página.
 """
 import logging
 import os
+import threading
 import time
 from datetime import datetime, timezone
 
 from app.db import init_database
-from app.services import cache, monitoring, zabbix
+from app.services import alerts, cache, host_specs, monitoring, zabbix
 
 LOG = logging.getLogger("zabbix.collector")
 
@@ -17,13 +18,39 @@ LOG = logging.getLogger("zabbix.collector")
 def cycle(cursor=0, tick=0):
     """Faz descoberta completa e atualiza lotes pequenos de hosts por ciclo."""
     hosts = zabbix.hosts()
+    count = max(1, min(24, int(os.getenv("HOSTS_PER_CYCLE", "8"))))
+    start = cursor % max(1, len(hosts))
+    batch = [hosts[(start + index) % len(hosts)] for index in
+             range(min(count, len(hosts)))] if hosts else []
+    if batch:
+        hostids = [str(h["hostid"]) for h in batch]
+        inventories = {str(host["hostid"]): host.get("inventory") for host in batch}
+        try:
+            all_items = zabbix.items_for_hosts(hostids)
+            grouped = {host_id: [] for host_id in hostids}
+            for item in all_items:
+                group = grouped.get(str(item.get("hostid")))
+                if group is not None:
+                    group.append(item)
+            for host_id, host_items in grouped.items():
+                gauges = monitoring.gauge_metrics(host_items)
+                diagnostics = monitoring.coverage_report(host_items, gauges)
+                specs = host_specs.specifications(host_items, inventories[host_id])
+                cache.save_host(host_id, host_items, gauges, diagnostics, specs=specs)
+        except zabbix.ZabbixError as exc:
+            LOG.warning("Falha na coleta de itens (lote de hosts): %s", exc)
+
+    summaries = cache.host_summaries([str(host["hostid"]) for host in hosts])
+    available = [{**host, "summary": summaries[str(host["hostid"])]}
+                 for host in hosts if str(host["hostid"]) in summaries]
     prior = cache.get("overview") or {}
     payload = {
-        "hosts": hosts,
+        "hosts": available,
+        "discovered_host_count": len(hosts),
         "problems": prior.get("problems", []),
         "kpis": {
-            "hosts": len(hosts),
-            "enabled": sum(str(h.get("status")) == "0" for h in hosts),
+            "hosts": len(available),
+            "enabled": sum(str(h.get("status")) == "0" for h in available),
             "active_problems": prior.get("kpis", {}).get("active_problems"),
             "problems_limited": prior.get("kpis", {}).get("problems_limited", False),
         },
@@ -35,26 +62,7 @@ def cycle(cursor=0, tick=0):
     # Não bloqueia a primeira lista de servidores em consultas de problemas.
     cache.save("overview", payload)
     cache.save("worker_status", {"status": "online",
-                                  "message": "Descoberta de hosts concluída."})
-    count = max(1, min(24, int(os.getenv("HOSTS_PER_CYCLE", "8"))))
-    start = cursor % max(1, len(hosts))
-    batch = [hosts[(start + index) % len(hosts)] for index in
-             range(min(count, len(hosts)))] if hosts else []
-    if batch:
-        hostids = [str(h["hostid"]) for h in batch]
-        try:
-            all_items = zabbix.items_for_hosts(hostids)
-            grouped = {host_id: [] for host_id in hostids}
-            for item in all_items:
-                group = grouped.get(str(item.get("hostid")))
-                if group is not None:
-                    group.append(item)
-            for host_id, host_items in grouped.items():
-                gauges = monitoring.gauge_metrics(host_items)
-                diagnostics = monitoring.coverage_report(host_items, gauges)
-                cache.save_host(host_id, host_items, gauges, diagnostics)
-        except zabbix.ZabbixError as exc:
-            LOG.warning("Falha na coleta de itens (lote de hosts): %s", exc)
+                                  "message": "Coleta de hosts atualizada."})
 
     # Consulta mais cara só a cada 6 ciclos, preservando última leitura válida.
     if tick % 6 == 0:
@@ -85,6 +93,7 @@ def main():
     cursor = 0
     tick = 0
     interval = max(15, min(300, int(os.getenv("POLL_INTERVAL", "30"))))
+    threading.Thread(target=alerts.run, args=(interval,), daemon=True, name="email-alerts").start()
     warmup = cache.get("overview") is None
     warmed = 0
     LOG.info("Coletor iniciado: intervalo=%ds; lote=%s hosts", interval,
@@ -97,7 +106,7 @@ def main():
                 tick += 1
                 cache.save("worker_status", {"status": "online", "tick": tick})
                 if warmup:
-                    found = len((cache.get("overview") or {}).get("hosts", []))
+                    found = (cache.get("overview") or {}).get("discovered_host_count", 0)
                     warmed += max(1, min(24, int(os.getenv("HOSTS_PER_CYCLE", "8"))))
                     warmup = found > 0 and warmed < found
             else:

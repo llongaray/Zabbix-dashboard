@@ -6,6 +6,8 @@ import {initializeHosts, getSelectedHostId, renderSnapshot, renderItems, showHos
 import {initializeSettings, loadConfiguration, onTokenValidated,
   showIntegrationStatus} from './settings.js';
 import {connectStream} from './socket.js';
+import {initializeSmtp} from './smtp.js';
+import {initializeCapacity} from './capacity.js';
 
 let stream = null;
 
@@ -35,6 +37,8 @@ function requestRefresh() {
 
 async function initialize() {
   initializeNavigation();
+  initializeCapacity();
+  initializeSmtp();
   initializeHistory();
   initializeHosts({
     onHistory: openHistory,

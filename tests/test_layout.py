@@ -19,10 +19,10 @@ def test_host_navigation_is_constrained_and_searchable():
 
 def test_browser_uses_backend_normalized_gauges():
     script = (ROOT / "app/static/js/hosts.js").read_text(encoding="utf-8")
-    routes = (ROOT / "app/routes/monitoring.py").read_text(encoding="utf-8")
+    collector = (ROOT / "app/worker.py").read_text(encoding="utf-8")
 
     assert "include_gauges=1" in script
-    assert "monitoring.gauge_metrics(data)" in routes
+    assert "monitoring.gauge_metrics(host_items)" in collector
     assert "function inferGauges" not in script
 
 

@@ -19,8 +19,55 @@ const gaugeLabels = {
   disk: 'Disco',
   network_in: 'Banda recebida (RX)',
   network_out: 'Banda enviada (TX)',
-  gpu: 'GPU',
 };
+const gaugeIcons = {cpu: 'cpu', memory: 'ram', disk: 'disk', network_in: 'download', network_out: 'upload'};
+const hostStatuses = {
+  online: 'Online', unreachable: 'Sem resposta ao ping',
+  recent: 'Coleta recente', stale: 'Coleta desatualizada', disabled: 'Desabilitado',
+  pending: 'Aguardando coleta',
+};
+const capacityFormat = new Intl.NumberFormat('pt-BR', {maximumFractionDigits: 1});
+
+function metricIcon(name) {
+  const namespace = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(namespace, 'svg');
+  const use = document.createElementNS(namespace, 'use');
+  svg.setAttribute('class', 'icon');
+  svg.setAttribute('aria-hidden', 'true');
+  use.setAttribute('href', '/static/monitor-icons.svg#' + name);
+  svg.append(use);
+  return svg;
+}
+
+function cardLine(icon, text) {
+  const line = document.createElement('span');
+  line.className = 'host-card-line';
+  line.append(metricIcon(icon), text);
+  return line;
+}
+
+function hostCard(host) {
+  const button = createButton('', () => selectHost(host), 'host-card');
+  button.setAttribute('aria-controls', 'overview-host-detail');
+  const summary = host.summary || {};
+  const specs = summary.specs || {};
+  const heading = cardLine('server', hostLabel(host));
+  heading.classList.add('host-card-title');
+  const osIcon = ['windows', 'linux'].includes(specs.os_family) ? specs.os_family : 'monitor';
+  const cpu = specs.cpu_model || (specs.logical_cpus ? specs.logical_cpus + ' CPUs lógicas' : 'Modelo de CPU não coletado');
+  const formatCapacity = bytes => capacityFormat.format(bytes / 1024 ** 3) + ' GiB';
+  const ram = specs.ram_bytes ? formatCapacity(specs.ram_bytes) + ' RAM' : 'RAM não coletada';
+  const disk = summary.disk_bytes ?
+    formatCapacity(summary.disk_bytes) + ' · Volume ' + summary.disk_volume : 'Disco total não coletado';
+  const health = host.status === '1' ? 'disabled' : summary.status || 'pending';
+  const status = document.createElement('span');
+  status.className = 'host-card-status';
+  status.dataset.health = health;
+  status.textContent = hostStatuses[health];
+  button.append(heading, cardLine(osIcon, specs.os || 'Sistema operacional não coletado'),
+    cardLine('cpu', cpu), cardLine('ram', ram), cardLine('disk', disk), status);
+  return button;
+}
 
 function hostLabel(host) {
   return host?.name || host?.host || String(host?.hostid || 'Host');
@@ -56,14 +103,19 @@ function renderHostButtons() {
     const element = $(id);
     if (!element) continue;
     const scrollX = element.scrollLeft;
+    const focused = element.contains(document.activeElement) ? document.activeElement.dataset.hostId : null;
     const query = ($(searchId)?.value || '').trim().toLocaleLowerCase('pt-BR');
     const filtered = currentHosts.filter(host =>
       hostLabel(host).toLocaleLowerCase('pt-BR').includes(query));
     const fragment = document.createDocumentFragment();
     for (const host of filtered) {
-      const button = createButton(hostLabel(host), () => selectHost(host));
+      const button = id === '#overview-hosts' ? hostCard(host) :
+        createButton(hostLabel(host), () => selectHost(host));
       button.title = hostLabel(host);
-      button.classList.toggle('active', selectedHost?.hostid === host.hostid);
+      button.dataset.hostId = String(host.hostid);
+      const active = selectedHost?.hostid === host.hostid;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', String(active));
       fragment.append(button);
     }
     if (!filtered.length) {
@@ -73,6 +125,7 @@ function renderHostButtons() {
       fragment.append(hint);
     }
     element.replaceChildren(fragment);
+    if (focused) Array.from(element.children).find(child => child.dataset.hostId === focused)?.focus({preventScroll: true});
     element.scrollLeft = scrollX;
     setText(countId, filtered.length + ' de ' + currentHosts.length + ' hosts');
   }
@@ -80,7 +133,10 @@ function renderHostButtons() {
 
 async function selectHost(host) {
   selectedHost = host;
+  $$('[data-host-specs]').forEach(panel => { panel.hidden = true; });
   renderHostButtons();
+  $('#overview-gauges').replaceChildren();
+  setText('#overview-selected-host', hostLabel(host));
   setText('#selected-host', hostLabel(host));
   setText('#overview-summary', 'Consultando ' + hostLabel(host) + '…');
   setMessage('#server-status', 'Consultando itens do Zabbix...');
@@ -110,19 +166,28 @@ export function renderSnapshot(snapshot) {
   setMessage('#overview-status', snapshot.warning ||
     'Coleta recebida às ' + stamp, !!snapshot.warning);
 
-  const previousIds = currentHosts.map(host => String(host.hostid)).join(',');
-  const nextIds = snapshot.hosts.map(host => String(host.hostid)).join(',');
+  const changed = JSON.stringify(currentHosts) !== JSON.stringify(snapshot.hosts);
   currentHosts = snapshot.hosts;
-  if (previousIds !== nextIds) {
+  if (changed) {
     const currentId = selectedHost?.hostid;
     selectedHost = currentHosts.find(host => host.hostid === currentId) || null;
     renderHostButtons();
     if (!selectedHost && currentHosts.length) {
       void selectHost(currentHosts[0]);
-    } else if (!currentHosts.length) {
-      setText('#overview-summary', 'Nenhum host disponível com este token.');
-      renderGauges({});
     }
+  }
+  if (!currentHosts.length) {
+    renderHostButtons();
+    setText('#overview-summary', snapshot.status === 'warming_up' ?
+      'Aguardando a primeira coleta.' : 'Nenhum servidor com métricas de infraestrutura coletadas.');
+    setText('#selected-host', 'Nenhum servidor disponível');
+    setText('#overview-selected-host', 'Métricas do servidor');
+    setMessage('#server-status', '');
+    $('#items').replaceChildren();
+    $('#server-coverage').replaceChildren();
+    $('#overview-gauges').replaceChildren();
+    $('#server-gauges').replaceChildren();
+    $$('[data-host-specs]').forEach(panel => { panel.hidden = true; });
   }
   renderProblems(snapshot.problems || []);
 }
@@ -167,7 +232,7 @@ function renderGauges(gauges) {
       card.className = 'gauge';
       const heading = document.createElement('p');
       heading.className = 'name';
-      heading.textContent = name;
+      heading.append(metricIcon(gaugeIcons[kind]), name);
       const detail = document.createElement('small');
       detail.title = metric?.name || '';
       detail.textContent = metric?.name || 'Métrica não disponível no Zabbix';
@@ -243,11 +308,32 @@ function renderItemTable() {
       filtered.length + ' itens visíveis (' + currentItems.length + ' no host).');
 }
 
+function renderSpecifications(specs) {
+  const ram = specs.ram_bytes ? new Intl.NumberFormat('pt-BR', {maximumFractionDigits: 1})
+    .format(specs.ram_bytes / 1024 ** 3) + ' GiB' : 'Não coletada';
+  const values = {
+    os: specs.os || 'Não coletado',
+    architecture: specs.architecture || '',
+    'cpu-model': specs.cpu_model || 'Modelo não coletado',
+    'logical-cpus': specs.logical_cpus ? specs.logical_cpus + ' CPUs lógicas' : '',
+    'ram-total': ram,
+  };
+  for (const panel of $$('[data-host-specs]')) {
+    for (const [field, value] of Object.entries(values)) {
+      panel.querySelector('[data-spec="' + field + '"]').textContent = value;
+    }
+    panel.querySelector('.os-windows').toggleAttribute('hidden', specs.os_family !== 'windows');
+    panel.querySelector('.os-linux').toggleAttribute('hidden', specs.os_family !== 'linux');
+    panel.hidden = false;
+  }
+}
+
 export function renderItems(payload) {
   if (!selectedHost || String(payload?.hostid) !== String(selectedHost.hostid)) {
     return;
   }
   currentItems = payload.items || [];
+  if (!payload.pending) renderSpecifications(payload.specs || {});
   setText('#overview-summary', hostLabel(selectedHost) + ' · ' +
     currentItems.length + ' itens disponíveis');
   // Não inferir métricas de rede no frontend; apenas dados validados pelo backend.
@@ -274,13 +360,13 @@ function renderCoverage(diagnostics) {
   const fragment = document.createDocumentFragment();
   const labels = {
     cpu: 'CPU', memory: 'RAM', disk: 'Disco',
-    gpu: 'GPU', network_in: 'Rede RX', network_out: 'Rede TX',
+    network_in: 'Rede RX', network_out: 'Rede TX',
   };
   for (const [kind, info] of Object.entries(diagnostics)) {
-    if (info.available) continue;
+    if (info.available || !Object.hasOwn(labels, kind)) continue;
     const line = document.createElement('p');
     line.className = 'coverage-warning';
-    line.textContent = (labels[kind] || kind) + ': ' +
+    line.textContent = labels[kind] + ': ' +
       (info.reason || 'Sem item válido') + ' ' + (info.suggestion || '');
     fragment.append(line);
   }

@@ -4,7 +4,7 @@ import {getSelectedHostId} from './hosts.js';
 import {$, setMessage, showView} from './state.js';
 import {clearHistoryCharts, renderLocal, renderMetric} from './history_charts.js';
 
-const metrics = ['cpu', 'memory', 'gpu', 'network'];
+const metrics = ['cpu', 'memory', 'disk', 'network'];
 let knownHosts = [];
 let lastLoaded = '';
 let lastRequestTime = 0;
@@ -14,6 +14,7 @@ export function updateHistoryHosts(hosts) {
   if (!Array.isArray(hosts)) return;
   const select = $('#history-host');
   if (!select) return;
+  const previous = select.value;
   const prior = select.value || String(getSelectedHostId() || '');
   knownHosts = hosts;
   const fragment = document.createDocumentFragment();
@@ -26,6 +27,17 @@ export function updateHistoryHosts(hosts) {
   select.replaceChildren(fragment);
   const exists = knownHosts.some(host => String(host.hostid) === prior);
   select.value = exists ? prior : String(knownHosts[0]?.hostid || '');
+  if (!knownHosts.length) select.add(new Option('Nenhum servidor disponível', ''));
+  if (previous && previous !== select.value) {
+    generation++;
+    lastLoaded = '';
+    clearHistoryCharts();
+    for (const metric of metrics) {
+      $('#history-badge-' + metric).textContent = 'Aguardando';
+      setMessage('#history-message-' + metric, '');
+    }
+    if ($('#view-history').classList.contains('active')) void loadHistory();
+  }
 }
 
 function markLoading() {
@@ -40,7 +52,10 @@ async function loadLocal(hostId, generationId) {
   try {
     const response = await requestJSON('/api/history/local/' + hostId + '?days=2');
     if (generation !== generationId) return;
-    for (const metric of metrics) renderLocal(metric, response.series);
+    // Local disk samples do not identify their source volume.
+    for (const metric of metrics) {
+      if (metric !== 'disk') renderLocal(metric, response.series);
+    }
     setMessage('#chart-status', 'Prévia local exibida. Atualizando via API oficial...');
   } catch (error) {
     setMessage('#chart-status', 'Cache local indisponível: ' + error.message, true);
@@ -58,7 +73,7 @@ async function loadOfficial(hostId, days, kind, generationId) {
     if (generation !== generationId) return;
     // Mantém o último gráfico do cache em vez de apagá-lo após erro de rede.
     setMessage('#history-message-' + kind,
-      'Falha na consulta oficial; prévia local preservada. ' + error.message, true);
+      'Falha na consulta oficial. ' + error.message, true);
   }
 }
 

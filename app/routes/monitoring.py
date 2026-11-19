@@ -5,13 +5,21 @@ from flask import jsonify, request
 
 from app.routes import bp
 from app.routes.decorators import protected
-from app.services import cache, zabbix
+from app.services import cache, capacity, zabbix
 
 
 @bp.get("/api/hosts")
 @protected
 def hosts():
     return jsonify((cache.get("overview") or {}).get("hosts", []))
+
+
+@bp.get("/api/capacity")
+@protected
+def capacity_report():
+    response = jsonify(capacity.report())
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @bp.get("/api/hosts/<host_id>/items")

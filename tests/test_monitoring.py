@@ -68,6 +68,15 @@ def test_memory_percentage():
     assert metrics["memory"]["value"] == 72.5
 
 
+def test_linux_memory_utilization_uses_the_original_zabbix_item():
+    metrics = gauge_metrics([
+        item("vm.memory.size[pavailable]", "25.835031", "%"),
+        item("vm.memory.utilization", "74.164969", "%", itemid="99"),
+    ])
+    assert metrics["memory"]["value"] == 74.16
+    assert metrics["memory"]["itemid"] == "99"
+
+
 def test_stale_value_is_flagged():
     metrics = gauge_metrics([item("system.cpu.util", "13", "%",
                                   clock=int(time.time()) - 7200)])

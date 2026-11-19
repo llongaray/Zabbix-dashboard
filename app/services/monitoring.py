@@ -111,7 +111,7 @@ def _kind(item):
         if not mode or mode in (",", ",,avg1", ",,avg5", ",,avg15"):
             return "cpu"
         return None
-    if key in ("vm.memory.util", "vm.memory.size[pused]"):
+    if key in ("vm.memory.util", "vm.memory.utilization", "vm.memory.size[pused]"):
         return "memory"
     if key.startswith(("vfs.fs.size[", "vfs.fs.dependent.size[")) and (
         "pused" in key.rsplit(",", 1)[-1]
