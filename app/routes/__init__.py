@@ -3,12 +3,24 @@ import os
 import time
 from functools import wraps
 from hmac import compare_digest
-from flask import Blueprint, request, jsonify, session, render_template, redirect
+from flask import Blueprint, request, jsonify, session, render_template, redirect, current_app
 from app.db import get_setting, put_setting
 from app.security import encrypt
 from app.services import zabbix
 
 bp = Blueprint("dashboard", __name__)
+
+
+@bp.errorhandler(Exception)
+def api_error(exc):
+    """Retorna JSON em endpoints API e evita HTML em fetch()."""
+    if not request.path.startswith("/api/"):
+        raise exc
+    current_app.logger.exception("Falha em %s", request.path)
+    if isinstance(exc, ValueError):
+        return jsonify(error=str(exc)), 400
+    return jsonify(error="Falha interna ao consultar o serviço. Consulte os logs."), 500
+
 
 
 def protected(fn):
@@ -66,7 +78,7 @@ def history(item_id):
 @bp.get("/api/config")
 @protected
 def config():
-    return jsonify({"zabbix_url":get_setting("zabbix_url") or "", "smtp_host":get_setting("smtp_host") or "", "smtp_port":get_setting("smtp_port") or "", "smtp_user":get_setting("smtp_user") or "", "token_configured":bool(get_setting("zabbix_token"))})
+    return jsonify({"zabbix_url":get_setting("zabbix_url") or os.getenv("ZABBIX_URL", ""), "smtp_host":get_setting("smtp_host") or "", "smtp_port":get_setting("smtp_port") or "", "smtp_user":get_setting("smtp_user") or "", "token_configured":bool(get_setting("zabbix_token"))})
 
 
 @bp.post("/api/config")
