@@ -2,7 +2,7 @@
 import {requestJSON} from './api.js';
 import {initializeNavigation, $, setMessage} from './state.js';
 import {initializeHistory, openHistory} from './history.js';
-import {initializeHosts, renderSnapshot, renderItems, showHostError} from './hosts.js';
+import {initializeHosts, getSelectedHostId, renderSnapshot, renderItems, showHostError} from './hosts.js';
 import {initializeSettings, loadConfiguration, onTokenValidated,
   showIntegrationStatus} from './settings.js';
 import {connectStream} from './socket.js';
@@ -37,7 +37,11 @@ async function initialize() {
 
   const config = await loadConfiguration();
   stream = connectStream({
-    onConnected: () => requestRefresh(),
+    onConnected: () => {
+      const host = getSelectedHostId();
+      if (host) stream?.watchHost(String(host));
+      requestRefresh();
+    },
     onSnapshot: payload => {
       renderSnapshot(payload);
       if (payload.version) {
