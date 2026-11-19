@@ -62,4 +62,12 @@ async function initialize() {
   });
 }
 
-initialize();
+initialize().catch(error => {
+  // Um erro isolado de DOM/API deve permanecer visível, nunca ocultar o defeito.
+  const message = 'Falha ao inicializar o dashboard: ' + (error?.message || error);
+  console.error(message, error);
+  setMessage('#settings-status', message, true);
+  setMessage('#overview-status', message, true);
+  const connection = $('#connection');
+  if (connection) connection.textContent = '● Erro na inicialização';
+});
