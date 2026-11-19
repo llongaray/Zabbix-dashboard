@@ -39,7 +39,7 @@ def login():
             session.clear()
             session["admin"] = True
             return redirect("/")
-        return "Senha inválida", 401
+        return render_template("login.html", error="Senha administrativa inválida."), 401
     return render_template("login.html")
 
 
