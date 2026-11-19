@@ -63,10 +63,11 @@ def save(key, payload):
     return stamp
 
 
-def save_host(host_id, items, gauges):
+def save_host(host_id, items, gauges, diagnostics=None):
     """Salva inventário e amostras recentes em uma única transação."""
     stamp = int(time.time())
-    payload = {"hostid": str(host_id), "items": items, "gauges": gauges}
+    payload = {"hostid": str(host_id), "items": items, "gauges": gauges,
+               "diagnostics": diagnostics or {}}
     with db.Session.begin() as session:
         session.execute(text(
             "INSERT INTO monitor_cache(cache_key, payload, updated_at) "
