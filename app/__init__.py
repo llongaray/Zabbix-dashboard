@@ -4,6 +4,7 @@ import os
 from flask import Flask, request
 
 from app.db import init_database
+from app.services import cache
 from app.realtime import socketio
 from app.routes import bp
 
@@ -16,6 +17,7 @@ def create_app():
         SESSION_COOKIE_SAMESITE="Lax",
     )
     init_database()
+    cache.ensure_schema()
     app.register_blueprint(bp)
     socketio.init_app(app)
 
