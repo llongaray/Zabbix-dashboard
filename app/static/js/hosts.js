@@ -36,7 +36,8 @@ export function initializeHosts({onHistory: history, onWatch: watch} = {}) {
   for (const id of ['#overview-host-search', '#server-host-search']) {
     $(id)?.addEventListener('input', renderHostButtons);
   }
-  for (const arrow of $$('[data-scroll-target]')) {
+  $('#item-search')?.addEventListener('input', renderItemTable);
+  for (const arrow of $('[data-scroll-target]')) {
     arrow.addEventListener('click', () => {
       const target = document.getElementById(arrow.dataset.scrollTarget);
       const direction = Number(arrow.dataset.scrollDir) || 1;
