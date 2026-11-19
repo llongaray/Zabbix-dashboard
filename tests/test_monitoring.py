@@ -72,3 +72,10 @@ def test_stale_value_is_flagged():
     metrics = gauge_metrics([item("system.cpu.util", "13", "%",
                                   clock=int(time.time()) - 7200)])
     assert metrics["cpu"]["stale"] is True
+
+
+def test_windows_dependent_disk_percentage_supported():
+    metrics = gauge_metrics([
+        item('vfs.fs.dependent.size["C:",pused]', "61.2", "%"),
+    ])
+    assert metrics["disk"]["value"] == 61.2
