@@ -48,4 +48,6 @@ jobs:
             node --input-type=module --check < "$file"
           done
       - name: Validate Docker Compose
-        run: docker compose --env-file .env.example config --quiet
+        run: |
+          cp .env.example .env
+          docker compose --env-file .env.example config --quiet
