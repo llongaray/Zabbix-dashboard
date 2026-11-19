@@ -50,6 +50,7 @@ async function handleSave(event) {
     $('#token').value = '';
     setText('#config-token', 'Validado');
     setText('#config-latency', result.validation.latency_ms + ' ms');
+    setText('#config-version', result.validation.version || 'Indisponível');
     $('#test-token').disabled = false;
     setMessage('#settings-status', 'Token validado e salvo criptografado no PostgreSQL.');
     refresh();
@@ -128,6 +129,7 @@ async function checkMethods() {
 export function onTokenValidated(report) {
   setText('#config-token', 'Validado');
   setText('#config-latency', report.latency_ms + ' ms');
+  setText('#config-version', report.version || 'Indisponível');
 }
 
 export function showIntegrationStatus(payload) {
