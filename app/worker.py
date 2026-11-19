@@ -34,6 +34,8 @@ def cycle(cursor=0, tick=0):
     }
     # Não bloqueia a primeira lista de servidores em consultas de problemas.
     cache.save("overview", payload)
+    cache.save("worker_status", {"status": "online",
+                                  "message": "Descoberta de hosts concluída."})
     count = max(1, min(24, int(os.getenv("HOSTS_PER_CYCLE", "8"))))
     start = cursor % max(1, len(hosts))
     batch = [hosts[(start + index) % len(hosts)] for index in
@@ -83,6 +85,8 @@ def main():
     cursor = 0
     tick = 0
     interval = max(15, min(300, int(os.getenv("POLL_INTERVAL", "30"))))
+    warmup = cache.get("overview") is None
+    warmed = 0
     LOG.info("Coletor iniciado: intervalo=%ds; lote=%s hosts", interval,
              os.getenv("HOSTS_PER_CYCLE", "8"))
     while True:
@@ -92,6 +96,10 @@ def main():
                 cursor = cycle(cursor, tick)
                 tick += 1
                 cache.save("worker_status", {"status": "online", "tick": tick})
+                if warmup:
+                    found = len((cache.get("overview") or {}).get("hosts", []))
+                    warmed += max(1, min(24, int(os.getenv("HOSTS_PER_CYCLE", "8"))))
+                    warmup = found > 0 and warmed < found
             else:
                 cache.save("worker_status", {
                     "status": "no_token",
@@ -103,7 +111,10 @@ def main():
                 "status": "error",
                 "message": "Falha na coleta. Consulte logs do collector.",
             })
-        time.sleep(max(1, interval - (time.monotonic() - started)))
+        # Em instalação nova, preenche a lista em lotes com pequenas pausas.
+        # Nos ciclos seguintes, volta ao intervalo configurado para poupar CPU.
+        effective_interval = 6 if warmup else interval
+        time.sleep(max(1, effective_interval - (time.monotonic() - started)))
 
 
 if __name__ == "__main__":
