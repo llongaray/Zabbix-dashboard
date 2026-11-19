@@ -17,10 +17,14 @@ Dashboard web de infraestrutura em **Python, Flask, PostgreSQL 17 e Socket.IO**.
 - **Somente API Token:** não solicita usuário/senha do Zabbix nem depende de OAuth ou MCP.
 - **Token protegido:** validado por `host.get` e persistido **criptografado com Fernet** no PostgreSQL; nunca é retornado ao navegador.
 - **Configuração sem reload:** salvar ou testar um token atualiza a interface sem recarregar a página.
-- **Tempo quase real:** o backend consulta a API em intervalos e distribui atualizações autenticadas usando Socket.IO/WebSocket, com fallback HTTP no cliente.
+- **Coletor independente:** container `collector` consulta o Zabbix sem depender de login, navegação ou conexão WebSocket.
+- **Cache quente PostgreSQL:** snapshots de hosts/itens e amostras recentes são servidos imediatamente após o login e sobrevivem a reinicializações.
+- **Atualização incremental:** o Socket.IO distribui somente mudanças do PostgreSQL, sem realizar consultas ao Zabbix na abertura da página.
 - **Descoberta dinâmica:** hosts e itens visíveis para o token cadastrado, sem lista fixa de máquinas.
 - **Indicadores de recursos:** CPU, memória, disco, rede RX/TX e GPU quando os itens correspondentes são coletados pelo Zabbix.
-- **Histórico:** seleção de 24 horas, 7, 30, 90 ou 365 dias; `history.get` para períodos curtos e `trend.get` para períodos longos.
+- **Histórico dedicado:** quatro gráficos de linhas, CPU, RAM, GPU e Rede RX/TX. A prévia usa amostras locais e o histórico oficial vem de `history.get` (24h) e `trend.get` (7, 30, 90 e 365 dias).
+- **Limiares de utilização:** 80% (atenção), 90% (crítico) e 100% (máximo) em CPU/RAM/GPU; na rede, somente se a capacidade da interface estiver monitorada.
+- **Diagnóstico dos N/D:** explica itens ausentes, valores inválidos e limitações de templates, sem inventar GPU ou disco.
 - **Catálogo de API:** métodos oficiais de leitura com diagnóstico opcional de permissão e latência.
 - **Diagnósticos:** erros da API Zabbix não invalidam a sessão Flask e não provocam logout automático.
 
@@ -70,7 +74,7 @@ python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().d
 ```powershell
 docker compose up -d --build
 docker compose ps
-docker compose logs --tail=100 dashboard
+docker compose logs --tail=100 collector dashboard
 ```
 
 Abra **http://localhost:5000** (publicação local via `127.0.0.1`).
@@ -83,7 +87,7 @@ Abra **http://localhost:5000** (publicação local via `127.0.0.1`).
 4. O backend valida `host.get` antes de substituir qualquer token existente; se a validação falhar, o anterior é preservado.
 5. Após a confirmação, as áreas de KPIs, servidores, problemas e histórico serão preenchidas conforme as permissões e os dados realmente disponíveis.
 
-O endereço do endpoint é somente leitura na interface, pois pertence à configuração de implantação.
+O endereço do endpoint é somente leitura na interface, pois pertence à configuração de implantação. O cache antigo é invalidado ao trocar de token, evitando persistir dados de permissões anteriores.
 
 ## Arquitetura
 
@@ -94,17 +98,21 @@ Zabbix-dashboard/
 │   ├── __init__.py           # Application factory
 │   ├── db.py                 # PostgreSQL e pool SQLAlchemy
 │   ├── security.py           # Fernet para credenciais
-│   ├── realtime.py           # Socket.IO autenticado e coletor compartilhado
+│   ├── realtime.py           # Distribuidor de cache PostgreSQL via Socket.IO
+│   ├── worker.py             # Coletor independente da interface
 │   ├── routes/
 │   │   ├── __init__.py       # Registro de blueprints e erros
 │   │   ├── decorators.py     # Sessão e origem de requisição
 │   │   ├── auth.py           # Login administrativo
 │   │   ├── settings.py       # Token, conexão e métodos API
-│   │   └── monitoring.py     # Hosts, itens, histórico, problemas
+│   │   ├── monitoring.py     # Hosts, itens e mini-histórico do cache
+│   │   └── history.py        # Histórico oficial por recurso
 │   ├── services/
 │   │   ├── zabbix.py         # Cliente JSON-RPC e validação
 │   │   ├── catalog.py        # Métodos de leitura suportados
-│   │   ├── monitoring.py     # KPIs e identificação de métricas
+│   │   ├── monitoring.py     # KPIs, métricas e diagnósticos
+│   │   ├── cache.py          # Snapshots e mini-histórico PostgreSQL
+│   │   ├── history_series.py # Históricos e normalização das séries
 │   │   └── mailing.py        # Serviço SMTP (não conectado ao painel)
 │   ├── static/
 │   │   ├── css/              # Login e dashboard
@@ -120,23 +128,29 @@ Zabbix-dashboard/
 ### Topologia de eventos
 
 ```text
-Zabbix --HTTPS/JSON-RPC--> Flask (poll a cada 25s)
-                               |
-                               | Socket.IO / WebSocket autenticado
-                               v
-                        Dashboard no navegador
-                               |
-                       POST /api/config
-                               |
-                valida host.get antes de gravar
-                               |
-                          PostgreSQL
-                        (token Fernet)
+Zabbix --JSON-RPC--> worker Python (container collector, independente)
+                             |
+                             | snapshots + mini-histórico 72h
+                             v
+                         PostgreSQL 17
+                             |
+          Flask (leitura imediata; sem consultar Zabbix no login)
+                             |
+                   Socket.IO / WebSocket
+                             v
+                     Dashboard no navegador
+
+Histórico: navegador --> Flask /api/history/series/...
+                     --> Zabbix history.get / trend.get
+                     --> 4 gráficos separados
+
+POST /api/config --> valida host.get --> criptografa token Fernet
+                 --> PostgreSQL (prioridade sobre .env)
 ```
 
 **O Zabbix não fornece WebSocket neste fluxo:** WebSocket é a camada entre Flask e navegador, alimentada por consultas periódicas à API. Portanto, não é telemetria instantânea nativa; a frequência real depende dos itens monitorados.
 
-O projeto usa 1 worker Gunicorn `gthread` por container e limite de pool PostgreSQL, para evitar múltiplos coletores duplicados e reduzir overhead de memória.
+O serviço `dashboard` usa 1 worker Gunicorn `gthread`; o serviço `collector` é um processo separado com consultas em lotes de até `HOSTS_PER_CYCLE` hosts. O PostgreSQL mantém os últimos snapshots e mini-histórico local por `CACHE_RETENTION_HOURS` (padrão 72h). Dados históricos de até 365 dias são consultados do Zabbix, respeitando sua retenção.
 
 ## Métodos da API
 
@@ -177,6 +191,14 @@ Com login ativo, endpoints de diagnóstico do Flask:
 - `POST /api/catalog/check` (consulta permissões)
 - `GET /api/snapshot`
 
+Novos endpoints de leitura local e histórico:
+- `GET /api/collector/status` — diagnóstico do coletor independente.
+- `GET /api/hosts/<host_id>/items?include_gauges=1` — itens e métricas já coletados.
+- `GET /api/history/local/<host_id>` — prévia do PostgreSQL, sem espera pela API.
+- `GET /api/history/series/<host_id>/<cpu|memory|gpu|network>?days=30` — série oficial por recurso.
+
+O GitHub Actions executa testes unitários, regressão de UI e integração com um PostgreSQL de teste. O banco corporativo não é usado nos testes.
+
 A API Zabbix retornará dados somente conforme os direitos do usuário associado ao token. As métricas de GPU não são garantidas, e a utilização percentual da banda depende de conhecer a capacidade da interface; RX/TX pode ser exibido como taxa em vez de percentual.
 
 ## Segurança
@@ -186,10 +208,26 @@ Este repositório é **público**. Não faça commit de `.env`, tokens, credenci
 ## Limitações da versão beta
 
 - A integração SMTP/Microsoft 365 e relatórios automáticos ainda não estão ligados ao painel.
-- Dados de 365 dias dependem da retenção de tendências do Zabbix.
+- Dados de 365 dias dependem da retenção de tendências do Zabbix; o PostgreSQL local contém apenas um mini-histórico recente.
+- Na primeira instalação, os hosts são preenchidos por lotes, sem bloquear o carregamento do dashboard.
+- Gráficos de rede são exibidos em Mbps; limites percentuais exigem velocidade da interface disponível no Zabbix.
 - O diagnóstico de permissões realiza consultas reais, mas não garante existência de dados para cada método.
 - Não foi validada aqui a conexão com a instância corporativa nem a execução Docker nesse ambiente.
 
 ## Licença
 
 GPL-3.0. Consulte [LICENSE](LICENSE).
+
+## Configuração do coletor
+
+```dotenv
+POLL_INTERVAL=30
+HOSTS_PER_CYCLE=8
+CACHE_RETENTION_HOURS=72
+```
+
+- `POLL_INTERVAL`: intervalo entre ciclos do processo coletor (mínimo 15s).
+- `HOSTS_PER_CYCLE`: quantidade máxima de hosts consultada por `item.get` a cada ciclo, de 1 a 24.
+- `CACHE_RETENTION_HOURS`: histórico local em horas. Os registros antigos são removidos periodicamente.
+
+Atualizar os serviços sem destruir dados: `docker compose up -d --build --force-recreate`. **Não execute `docker compose down -v`**, pois o volume PostgreSQL contém token e histórico.
