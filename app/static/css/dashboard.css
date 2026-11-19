@@ -22,3 +22,8 @@ input[readonly]{background:#16203d!important;border-style:dashed!important;color
 .status{white-space:pre-wrap}
 @media(max-width:1080px){.gauge-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){.gauge-grid{grid-template-columns:1fr 1fr}.config-kpis{grid-template-columns:1fr 1fr}}
+
+/* Gauge circular somente para métricas que o Zabbix retorna em %. */
+.progress-ring{--progress:0%;height:88px;width:88px;margin:8px auto;display:grid;place-items:center;border-radius:50%;background:conic-gradient(#a76bff var(--progress),#2a3558 0);position:relative}
+.progress-ring:before{content:"";position:absolute;inset:9px;border-radius:50%;background:#121c37}
+.progress-ring span{position:relative;color:#f4eeff;font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}
