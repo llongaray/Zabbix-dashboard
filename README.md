@@ -56,7 +56,7 @@ Documentação: [Zabbix 7.0 — API](https://www.zabbix.com/documentation/7.0/en
 ### 1. Clonar e configurar variáveis de implantação
 
 ```powershell
-git clone git@github.com:llongaray/Zabbix-dashboard.git
+git clone git@github.com:Avansat-Tecnologias/Zabbix-dashboard.git
 cd Zabbix-dashboard
 Copy-Item .env.example .env
 notepad .env
