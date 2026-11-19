@@ -64,7 +64,8 @@ def call(method, params=None, *, token=None):
             base_url() + "/api_jsonrpc.php",
             headers=headers,
             json={"jsonrpc": "2.0", "method": method, "params": params or {}, "id": 1},
-            timeout=(5, 15),
+            # Itens volumosos e problemas podem levar mais tempo que host.get.
+            timeout=(5, 35 if method in ("item.get", "problem.get") else 15),
             allow_redirects=False,
         )
         if 300 <= response.status_code < 400:
