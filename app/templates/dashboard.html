@@ -44,7 +44,8 @@
         </div>
         <div class="layout2">
           <article class="card"><h3>Servidores disponíveis</h3>
-            <div class="tabs" id="overview-hosts"></div>
+            <div class="host-tools"><input id="overview-host-search" type="search" placeholder="Buscar entre os servidores" aria-label="Buscar servidores da visão geral"><span id="overview-host-count" class="host-count">0 hosts</span></div>
+            <div class="host-rail"><button type="button" class="host-arrow" data-scroll-target="overview-hosts" data-scroll-dir="-1" aria-label="Servidores anteriores">‹</button><div class="tabs" id="overview-hosts"></div><button type="button" class="host-arrow" data-scroll-target="overview-hosts" data-scroll-dir="1" aria-label="Próximos servidores">›</button></div>
             <div id="overview-summary" class="empty">Aguardando conexão com o Zabbix.</div>
             <div id="overview-gauges" class="gauge-grid"></div>
           </article>
@@ -60,7 +61,7 @@
       </section>
       <section class="view" id="view-servers">
         <div class="heading"><div><h2>Servidores</h2><p class="muted">Abas de hosts, inventário de itens e recursos medidos</p></div></div>
-        <div class="card"><div class="tabs" id="server-tabs"></div><h3 id="selected-host">Selecione um host</h3>
+        <div class="card"><div class="host-tools"><input id="server-host-search" type="search" placeholder="Buscar servidor" aria-label="Buscar servidores da aba Servidores"><span id="server-host-count" class="host-count">0 hosts</span></div><div class="host-rail"><button type="button" class="host-arrow" data-scroll-target="server-tabs" data-scroll-dir="-1" aria-label="Servidores anteriores">‹</button><div class="tabs" id="server-tabs"></div><button type="button" class="host-arrow" data-scroll-target="server-tabs" data-scroll-dir="1" aria-label="Próximos servidores">›</button></div><h3 id="selected-host">Selecione um host</h3>
           <div class="gauge-grid" id="server-gauges"></div>
           <div class="tablewrap"><table><thead><tr><th>Item monitorado</th><th>Valor atual</th><th>Histórico</th></tr></thead><tbody id="items"></tbody></table></div>
           <p class="status" id="server-status"></p></div>
