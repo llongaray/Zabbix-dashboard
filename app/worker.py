@@ -48,9 +48,9 @@ def cycle(cursor=0, tick=0):
                 if group is not None:
                     group.append(item)
             for host_id, host_items in grouped.items():
-                cache.save_host(
-                    host_id, host_items, monitoring.gauge_metrics(host_items),
-                )
+                gauges = monitoring.gauge_metrics(host_items)
+                diagnostics = monitoring.coverage_report(host_items, gauges)
+                cache.save_host(host_id, host_items, gauges, diagnostics)
         except zabbix.ZabbixError as exc:
             LOG.warning("Falha na coleta de itens (lote de hosts): %s", exc)
 
