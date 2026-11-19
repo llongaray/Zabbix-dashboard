@@ -34,6 +34,7 @@ def test_valid_token_persists_without_logout(client, monkeypatch):
     ))
     monkeypatch.setattr(settings.socketio, "emit", lambda *args, **kwargs: None)
     monkeypatch.setattr(settings, "request_refresh", lambda: None)
+    monkeypatch.setattr(settings.cache, "invalidate", lambda: None)
 
     response = client.post("/api/config", json={"token": "secret-token"})
     assert response.status_code == 200
