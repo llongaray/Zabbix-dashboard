@@ -58,3 +58,28 @@ html,body{width:100%;max-width:100%;overflow-x:clip}
 @media(max-width:1200px){.layout2{grid-template-columns:minmax(0,1fr)}.gauge-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:800px){.gauge-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.content{padding:18px}}
 @media(max-width:560px){.host-rail{grid-template-columns:28px minmax(0,1fr) 28px}.gauge-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.gauge{padding:11px}.progress-ring{width:68px;height:68px}.topbar{flex-wrap:wrap}.footer{flex-wrap:wrap;gap:5px}}
+
+
+/* Histórico por host: quatro séries com status operacional e limites legíveis. */
+.history-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.history-grid>*{min-width:0}
+.history-card{min-height:370px;overflow:hidden}
+.history-card .chartbox{height:260px}
+.chart-header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+.chart-header h3{margin:0}
+.history-legend{display:flex;gap:16px;flex-wrap:wrap;margin:0 0 12px;padding:10px 16px;border:1px solid #313e64;border-radius:11px;background:#18223f;color:#bcc8e4;font-size:12px}
+.history-legend span{display:flex;align-items:center;gap:7px}
+.threshold-dot{display:inline-block;border-radius:50%;height:10px;width:10px;background:#68cda5}
+.threshold-dot.warning{background:#e9b963}
+.threshold-dot.critical{background:#f48083}
+.threshold-dot.maximum{background:#e6506d}
+.metric-status{border-radius:9px;border:1px solid #48567e;padding:5px 9px;color:#aebbdc;font-size:11px;white-space:nowrap}
+.metric-status.normal{border-color:#3f8f82;color:#76ddc2}
+.metric-status.warning{border-color:#9c7b43;color:#f2cb8b}
+.metric-status.critical,.metric-status.maximum{border-color:#a64b5e;color:#ffadb8}
+.history-footnote{font-size:12px;line-height:1.55;margin-top:16px}
+#history-host{min-width:190px;max-width:300px}
+#days{min-width:96px}
+#refresh-history{align-self:flex-end}
+@media(max-width:1150px){.history-grid{grid-template-columns:1fr}}
+@media(max-width:700px){.history-grid{grid-template-columns:1fr}.history-card{min-height:320px}.history-card .chartbox{height:220px}#history-host{max-width:100%}}
