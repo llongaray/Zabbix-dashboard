@@ -52,7 +52,7 @@ def get(key):
 
 def save(key, payload):
     """Persistência independente da requisição HTTP e da conexão Socket.IO."""
-    stamp = int(time.time())
+    stamp = time.time_ns()
     with db.Session.begin() as session:
         session.execute(text(
             "INSERT INTO monitor_cache(cache_key, payload, updated_at) "
