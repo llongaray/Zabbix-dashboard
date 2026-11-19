@@ -74,3 +74,21 @@ def test_gpu_missing_is_explicitly_unavailable(monkeypatch):
     result = history_series.host_series("10084", "gpu", 7)
     assert result["series"] == []
     assert "Sem item monitorado" in result["message"]
+
+
+def test_network_cross_interface_capacity_not_shared(monkeypatch):
+    rx = metric("20", "net.if.in[eth0,bytes]", "100000", "bps")
+    tx = metric("21", "net.if.out[eth1,bytes]", "120000", "bps")
+    speed = metric("30", "net.if.speed[eth0]", "1000000000", "bps")
+    monkeypatch.setattr(history_series.cache, "get", lambda key: {
+        "items": [rx, tx, speed],
+        "gauges": {"network_in": {"itemid": "20"},
+                   "network_out": {"itemid": "21"}},
+    })
+    monkeypatch.setattr(history_series.zabbix, "history", lambda *args: {
+        "source": "history.get", "points": [
+            {"clock": "1770000000", "value": "100000"}],
+    })
+    result = history_series.host_series("10084", "network", 1)
+    assert result["capacity_mbps"] is None
+    assert result["thresholds"] == []
