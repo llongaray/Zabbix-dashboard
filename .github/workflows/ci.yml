@@ -3,9 +3,30 @@ on:
   push:
     branches: [main]
   pull_request:
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: dashboard_test
+          POSTGRES_USER: zabbix_test
+          POSTGRES_PASSWORD: test_password_for_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U zabbix_test -d dashboard_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      POSTGRES_DB: dashboard_test
+      POSTGRES_USER: zabbix_test
+      POSTGRES_PASSWORD: test_password_for_ci
+      POSTGRES_HOST: 127.0.0.1
+      ADMIN_PASSWORD: ci_test_login
+      FLASK_SECRET_KEY: ci_session_secret_not_for_real_deployments
+      INTEGRATION_DB: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -17,12 +38,14 @@ jobs:
           pip install -r requirements.txt pytest ruff
       - name: Compile Python modules
         run: python -m compileall -q main.py app
-      - name: Check critical Python mistakes
+      - name: Check Python errors
         run: ruff check --select E4,E7,E9,F --ignore E402 app tests main.py
-      - name: Run Python tests
-        run: pytest -q
-      - name: Check JavaScript module syntax
+      - name: Run unit and PostgreSQL integration tests
+        run: python -m pytest -q
+      - name: Check JavaScript modules
         run: |
           for file in app/static/js/*.js; do
             node --input-type=module --check < "$file"
           done
+      - name: Validate Docker Compose
+        run: docker compose --env-file .env.example config --quiet
