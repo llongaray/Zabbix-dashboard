@@ -5,6 +5,7 @@ CPU, RAM, GPU são percentuais; rede é Mbps. Nenhuma ocupação percentual
 """
 import math
 import re
+import time
 
 from app.services import cache, zabbix
 
@@ -77,7 +78,7 @@ def severity(value):
 
 def _history(item, kind, days):
     value_type = int(item.get("value_type", 0))
-    now = int(__import__("time").time())
+    now = int(time.time())
     result = zabbix.history(item["itemid"], value_type, now - days * 86400, now)
     points = []
     for point in result["points"]:
