@@ -17,7 +17,16 @@ def hosts():
 @bp.get("/api/hosts/<host_id>/items")
 @protected
 def items(host_id):
-    return jsonify(zabbix.items(host_id))
+    data = zabbix.items(host_id)
+    # Compatível com o cliente antigo; permite transferir itens + gauges em
+    # apenas uma consulta à API Zabbix durante o fallback HTTP.
+    if request.args.get("include_gauges") == "1":
+        return jsonify({
+            "hostid": host_id,
+            "items": data,
+            "gauges": monitoring.gauge_metrics(data),
+        })
+    return jsonify(data)
 
 
 @bp.get("/api/hosts/<host_id>/gauges")
