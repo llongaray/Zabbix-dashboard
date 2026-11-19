@@ -11,7 +11,9 @@ let stream = null;
 
 async function loadOnce() {
   try {
-    renderSnapshot(await requestJSON('/api/snapshot'));
+    const payload = await requestJSON('/api/snapshot');
+    renderSnapshot(payload);
+    if (payload.version) document.querySelector('#config-version').textContent = payload.version;
     showIntegrationStatus({connected: true, message: 'Integração respondendo.'});
   } catch (error) {
     showIntegrationStatus({connected: false, message: error.message});
@@ -36,7 +38,12 @@ async function initialize() {
   const config = await loadConfiguration();
   stream = connectStream({
     onConnected: () => requestRefresh(),
-    onSnapshot: renderSnapshot,
+    onSnapshot: payload => {
+      renderSnapshot(payload);
+      if (payload.version) {
+        document.querySelector('#config-version').textContent = payload.version;
+      }
+    },
     onHostItems: renderItems,
     onHostError: showHostError,
     onIntegration: showIntegrationStatus,
