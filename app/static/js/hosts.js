@@ -1,31 +1,79 @@
-/** Listagem de hosts e itens, com atualização incremental recebida por WebSocket. */
+/**
+ * Apresentação de hosts e métricas.
+ * Seleção filtrável para dezenas de hosts; sem reflows horizontais.
+ * Não classificamos itens Zabbix por prefixo aqui: o backend valida a semântica.
+ */
 import {requestJSON} from './api.js';
-import { $, createButton, setMessage, setText } from './state.js';
+import {$, $$, createButton, setMessage, setText} from './state.js';
 
 let currentHosts = [];
 let selectedHost = null;
+let currentItems = [];
 let onHistory = null;
 let onWatch = null;
-const severity = ['Não classificado', 'Informação', 'Aviso', 'Média', 'Alta', 'Desastre'];
 
-export function initializeHosts(options) {
-  onHistory = options.onHistory;
-  onWatch = options.onWatch;
-}
+const severities = ['Não classificado', 'Informação', 'Aviso', 'Média', 'Alta', 'Desastre'];
+const gaugeLabels = {
+  cpu: 'CPU',
+  memory: 'Memória RAM',
+  disk: 'Disco',
+  network_in: 'Banda recebida (RX)',
+  network_out: 'Banda enviada (TX)',
+  gpu: 'GPU',
+};
 
 function hostLabel(host) {
-  return host.name || host.host || host.hostid;
+  return host?.name || host?.host || String(host?.hostid || 'Host');
+}
+
+export function getSelectedHostId() {
+  return selectedHost?.hostid || null;
+}
+
+export function initializeHosts({onHistory: history, onWatch: watch} = {}) {
+  onHistory = history;
+  onWatch = watch;
+  for (const id of ['#overview-host-search', '#server-host-search']) {
+    $(id)?.addEventListener('input', renderHostButtons);
+  }
+  for (const arrow of $$('[data-scroll-target]')) {
+    arrow.addEventListener('click', () => {
+      const target = document.getElementById(arrow.dataset.scrollTarget);
+      const direction = Number(arrow.dataset.scrollDir) || 1;
+      target?.scrollBy({left: direction * Math.max(250, target.clientWidth * 0.7),
+        behavior: 'smooth'});
+    });
+  }
 }
 
 function renderHostButtons() {
-  for (const selector of ['#server-tabs', '#overview-hosts']) {
-    const container = $(selector);
-    container.replaceChildren();
-    for (const host of currentHosts) {
-      const tab = createButton(hostLabel(host), () => selectHost(host));
-      tab.classList.toggle('active', selectedHost?.hostid === host.hostid);
-      container.append(tab);
+  const rails = [
+    ['#overview-hosts', '#overview-host-search', '#overview-host-count'],
+    ['#server-tabs', '#server-host-search', '#server-host-count'],
+  ];
+  for (const [id, searchId, countId] of rails) {
+    const element = $(id);
+    if (!element) continue;
+    const scrollX = element.scrollLeft;
+    const query = ($(searchId)?.value || '').trim().toLocaleLowerCase('pt-BR');
+    const filtered = currentHosts.filter(host =>
+      hostLabel(host).toLocaleLowerCase('pt-BR').includes(query));
+    const fragment = document.createDocumentFragment();
+    for (const host of filtered) {
+      const button = createButton(hostLabel(host), () => selectHost(host));
+      button.title = hostLabel(host);
+      button.classList.toggle('active', selectedHost?.hostid === host.hostid);
+      fragment.append(button);
     }
+    if (!filtered.length) {
+      const hint = document.createElement('span');
+      hint.className = 'muted';
+      hint.textContent = 'Nenhum servidor encontrado.';
+      fragment.append(hint);
+    }
+    element.replaceChildren(fragment);
+    element.scrollLeft = scrollX;
+    setText(countId, filtered.length + ' de ' + currentHosts.length + ' hosts');
   }
 }
 
@@ -33,138 +81,137 @@ async function selectHost(host) {
   selectedHost = host;
   renderHostButtons();
   setText('#selected-host', hostLabel(host));
-  setText('#overview-summary', 'Consultando métricas de ' + hostLabel(host) + '...');
-  setMessage('#server-status', 'Carregando itens do host...');
-  if (onWatch) onWatch(host.hostid);
+  setText('#overview-summary', 'Consultando ' + hostLabel(host) + '…');
+  setMessage('#server-status', 'Consultando itens do Zabbix...');
+  onWatch?.(String(host.hostid));
   try {
-    const items = await requestJSON('/api/hosts/' +
-      encodeURIComponent(host.hostid) + '/items');
-    renderItems({hostid: host.hostid, items});
+    const payload = await requestJSON('/api/hosts/' +
+      encodeURIComponent(host.hostid) + '/items?include_gauges=1');
+    renderItems(payload);
   } catch (error) {
-    setMessage('#server-status', error.message, true);
+    if (selectedHost?.hostid === host.hostid) {
+      setMessage('#server-status', error.message, true);
+      renderGauges({});
+    }
   }
 }
 
 export function renderSnapshot(snapshot) {
-  if (!snapshot || !Array.isArray(snapshot.hosts)) return;
-  const kpis = snapshot.kpis || {};
-  setText('#total-hosts', kpis.hosts ?? snapshot.hosts.length);
-  setText('#enabled-hosts', kpis.enabled);
-  setText('#total-problems', kpis.active_problems);
+  if (!Array.isArray(snapshot?.hosts)) return;
+  const kpi = snapshot.kpis || {};
+  setText('#total-hosts', kpi.hosts ?? snapshot.hosts.length);
+  setText('#enabled-hosts', kpi.enabled);
+  setText('#total-problems', kpi.active_problems == null ? 'N/D' :
+    (kpi.problems_limited ? '≥ ' : '') + kpi.active_problems);
   const stamp = new Date(snapshot.timestamp || Date.now()).toLocaleTimeString('pt-BR');
   setText('#updated', stamp);
   setText('#config-updated', stamp);
   setMessage('#overview-status', snapshot.warning ||
-    'Recebimento de métricas ativo: última coleta ' + stamp, false);
+    'Coleta recebida às ' + stamp, !!snapshot.warning);
 
-  const newIds = snapshot.hosts.map(h => h.hostid).join(',');
-  const oldIds = currentHosts.map(h => h.hostid).join(',');
+  const previousIds = currentHosts.map(host => String(host.hostid)).join(',');
+  const nextIds = snapshot.hosts.map(host => String(host.hostid)).join(',');
   currentHosts = snapshot.hosts;
-  if (newIds !== oldIds) {
-    const previous = selectedHost?.hostid;
-    selectedHost = currentHosts.find(h => h.hostid === previous) || null;
+  if (previousIds !== nextIds) {
+    const currentId = selectedHost?.hostid;
+    selectedHost = currentHosts.find(host => host.hostid === currentId) || null;
     renderHostButtons();
-    if (!selectedHost && currentHosts.length) selectHost(currentHosts[0]);
-    if (!currentHosts.length) setText('#overview-summary', 'Nenhum host visível com este token.');
+    if (!selectedHost && currentHosts.length) {
+      void selectHost(currentHosts[0]);
+    } else if (!currentHosts.length) {
+      setText('#overview-summary', 'Nenhum host disponível com este token.');
+      renderGauges({});
+    }
   }
   renderProblems(snapshot.problems || []);
 }
 
 function renderProblems(problems) {
   const tbody = $('#problems-body');
-  tbody.replaceChildren();
-  for (const p of problems.slice(0, 80)) {
+  if (!tbody) return;
+  const fragment = document.createDocumentFragment();
+  for (const problem of problems.slice(0, 80)) {
     const row = document.createElement('tr');
-    const name = document.createElement('td');
-    name.textContent = p.name || 'Problema sem título';
-    const level = document.createElement('td');
-    level.textContent = severity[Number(p.severity)] || 'Indefinida';
-    const when = document.createElement('td');
-    when.textContent = p.clock ?
-      new Date(Number(p.clock) * 1000).toLocaleString('pt-BR') : '—';
-    row.append(name, level, when);
-    tbody.append(row);
+    for (const label of [
+      problem.name || 'Problema sem nome',
+      severities[Number(problem.severity)] || 'Não classificado',
+      problem.clock ? new Date(Number(problem.clock) * 1000)
+        .toLocaleString('pt-BR') : '—',
+    ]) {
+      const cell = document.createElement('td');
+      cell.textContent = label;
+      row.append(cell);
+    }
+    fragment.append(row);
   }
   if (!problems.length) {
     const row = document.createElement('tr');
     const cell = document.createElement('td');
     cell.colSpan = 3;
-    cell.textContent = 'Nenhum problema disponível nesta consulta.';
+    cell.textContent = 'Não há problemas nesta consulta.';
     row.append(cell);
-    tbody.append(row);
+    fragment.append(row);
   }
+  tbody.replaceChildren(fragment);
 }
 
-function renderGauges(items, gauges) {
-  for (const containerId of ['#server-gauges', '#overview-gauges']) {
-    const container = $(containerId);
-    container.replaceChildren();
-    const names = {
-      cpu: 'CPU', memory: 'Memória RAM', disk: 'Disco',
-      network_in: 'Rede RX', network_out: 'Rede TX', gpu: 'GPU',
-    };
-    for (const [kind, label] of Object.entries(names)) {
+function renderGauges(gauges) {
+  for (const selector of ['#server-gauges', '#overview-gauges']) {
+    const container = $(selector);
+    if (!container) continue;
+    const fragment = document.createDocumentFragment();
+    for (const [kind, name] of Object.entries(gaugeLabels)) {
       const metric = gauges?.[kind];
       const card = document.createElement('article');
       card.className = 'gauge';
-      const title = document.createElement('p');
-      title.className = 'name';
-      title.textContent = label;
-      const value = document.createElement('div');
-      value.className = 'value';
-      value.textContent = metric ?
-        String(metric.value || '0') + ' ' + (metric.units || '') : 'N/D';
+      const heading = document.createElement('p');
+      heading.className = 'name';
+      heading.textContent = name;
       const detail = document.createElement('small');
-      detail.textContent = metric ? metric.name : 'Item não identificado no Zabbix';
-      // Utiliza anel de progresso apenas quando o item informa porcentagem real.
-      const numeric = metric ? Number(metric.value) : NaN;
-      const isPercent = metric && String(metric.units).trim() === '%' &&
-        Number.isFinite(numeric) && numeric >= 0 && numeric <= 100;
-      if (isPercent) {
+      detail.title = metric?.name || '';
+      detail.textContent = metric?.name || 'Métrica não disponível no Zabbix';
+      if (metric && metric.stale) {
+        const stale = document.createElement('span');
+        stale.className = 'metric-stale';
+        stale.textContent = 'Leitura desatualizada · ';
+        detail.prepend(stale);
+      }
+      const value = Number(metric?.value);
+      const percent = metric && metric.units === '%' &&
+        Number.isFinite(value) && value >= 0 && value <= 100;
+      if (percent) {
         const ring = document.createElement('div');
         ring.className = 'progress-ring';
-        ring.style.setProperty('--progress', numeric + '%');
+        ring.style.setProperty('--progress', value + '%');
         ring.setAttribute('role', 'img');
-        ring.setAttribute('aria-label', label + ': ' + numeric + '%');
+        ring.setAttribute('aria-label', name + ': ' + value.toFixed(1) + '%');
         const text = document.createElement('span');
-        text.textContent = numeric.toFixed(1) + '%';
+        text.textContent = value.toFixed(1) + '%';
         ring.append(text);
-        card.append(title, ring, detail);
+        card.append(heading, ring, detail);
       } else {
-        card.append(title, value, detail);
+        const number = document.createElement('div');
+        number.className = 'value';
+        number.textContent = metric ? String(metric.value) + ' ' +
+          (metric.units || '') : 'N/D';
+        card.append(heading, number, detail);
       }
-      container.append(card);
+      fragment.append(card);
     }
+    container.replaceChildren(fragment);
   }
 }
 
-function inferGauges(items) {
-  const selectors = {
-    cpu: it => String(it.key_).startsWith('system.cpu.util'),
-    memory: it => String(it.key_).startsWith('vm.memory.util') ||
-      String(it.key_) === 'vm.memory.size[pused]',
-    disk: it => String(it.key_).startsWith('vfs.fs.size[') &&
-      String(it.key_).includes('pused'),
-    network_in: it => String(it.key_).startsWith('net.if.in['),
-    network_out: it => String(it.key_).startsWith('net.if.out['),
-    gpu: it => String(it.key_).toLowerCase().includes('gpu.util'),
-  };
-  return Object.fromEntries(Object.entries(selectors).flatMap(([key, filter]) => {
-    const item = items.find(filter);
-    return item ? [[key, item]] : [];
-  }));
-}
-
-export function renderItems(payload) {
-  if (!selectedHost || String(payload.hostid) !== String(selectedHost.hostid)) return;
-  const items = payload.items || [];
+function renderItemTable() {
   const tbody = $('#items');
-  tbody.replaceChildren();
-  setText('#overview-summary', hostLabel(selectedHost) +
-    ' · ' + items.length + ' itens monitorados');
-  renderGauges(items, payload.gauges || inferGauges(items));
-  const limit = 500;
-  for (const item of items.slice(0, limit)) {
+  if (!tbody) return;
+  const query = ($('#item-search')?.value || '').trim().toLocaleLowerCase('pt-BR');
+  const filtered = currentItems.filter(item =>
+    ((item.name || '') + ' ' + (item.key_ || ''))
+      .toLocaleLowerCase('pt-BR').includes(query));
+  const limit = 150;
+  const fragment = document.createDocumentFragment();
+  for (const item of filtered.slice(0, limit)) {
     const row = document.createElement('tr');
     const name = document.createElement('td');
     name.textContent = item.name || item.key_ || 'Item';
@@ -172,16 +219,39 @@ export function renderItems(payload) {
     value.textContent = (item.lastvalue ?? '—') + ' ' + (item.units || '');
     const actions = document.createElement('td');
     if (['0', '3'].includes(String(item.value_type))) {
-      actions.append(createButton('Histórico', () => onHistory(item), 'btn secondary'));
+      actions.append(createButton('Histórico', () => onHistory?.(item),
+        'btn secondary'));
     } else {
-      actions.textContent = '—';
+      actions.textContent = 'Não numérico';
     }
     row.append(name, value, actions);
-    tbody.append(row);
+    fragment.append(row);
   }
-  setMessage('#server-status', items.length > limit ?
-    'Exibindo os primeiros ' + limit + ' de ' + items.length + ' itens.' :
-    'Itens atualizados: ' + items.length);
+  if (!filtered.length) {
+    const row = document.createElement('tr');
+    const cell = document.createElement('td');
+    cell.colSpan = 3;
+    cell.textContent = 'Nenhum item encontrado.';
+    row.append(cell);
+    fragment.append(row);
+  }
+  tbody.replaceChildren(fragment);
+  setMessage('#server-status',
+    filtered.length > limit ? 'Exibindo ' + limit + ' de ' +
+      filtered.length + ' itens. Filtre para localizar outros.' :
+      filtered.length + ' itens visíveis (' + currentItems.length + ' no host).');
+}
+
+export function renderItems(payload) {
+  if (!selectedHost || String(payload?.hostid) !== String(selectedHost.hostid)) {
+    return;
+  }
+  currentItems = payload.items || [];
+  setText('#overview-summary', hostLabel(selectedHost) + ' · ' +
+    currentItems.length + ' itens disponíveis');
+  // Não inferir métricas de rede no frontend; apenas dados validados pelo backend.
+  renderGauges(payload.gauges || {});
+  renderItemTable();
 }
 
 export function showHostError(error) {
