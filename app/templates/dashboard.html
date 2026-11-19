@@ -1,1 +1,125 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Zabbix Dashboard | Infraestrutura</title><link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}"><script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js" defer></script><script src="{{ url_for('static', filename='js/dashboard.js') }}" defer></script></head><body><div class="shell"><aside class="sidebar" aria-label="Menu principal"><div class="brand"><span class="brand-icon">◈</span><span>Zabbix Dashboard<small>INFRASTRUCTURE</small></span></div><nav class="nav"><button class="active" data-view="overview">◫ &nbsp; Visão geral</button><button data-view="servers">▣ &nbsp; Servidores</button><button data-view="history">◷ &nbsp; Histórico</button><button data-view="settings">⚙ &nbsp; Configurações</button></nav><div class="sidefoot">Monitoramento de infraestrutura<br>API Zabbix · PostgreSQL</div></aside><div class="workspace"><header class="topbar"><div><h1>Central de Monitoramento</h1><p>Visibilidade e inventário de infraestrutura</p></div><div class="top-actions"><span class="pill" id="connection">● Aguardando conexão</span><form action="/logout" method="post"><button class="logout">Sair</button></form></div></header><main class="content"><section class="view active" id="view-overview"><div class="heading"><div><h2>Visão geral <span class="accent">◈</span></h2><p class="muted">Indicadores disponíveis dos hosts monitorados</p></div><button class="btn" id="refresh">↻ Atualizar dados</button></div><div class="grid"><article class="card metric"><span class="label">Servidores cadastrados</span><strong id="total-hosts">—</strong><small>Hosts retornados pela API</small></article><article class="card metric"><span class="label">Hosts habilitados</span><strong class="cyan" id="enabled-hosts">—</strong><small>Status de configuração do host</small></article><article class="card metric"><span class="label">Itens monitorados</span><strong class="pink" id="total-items">—</strong><small>Host selecionado</small></article><article class="card metric"><span class="label">Última atualização</span><strong id="updated" style="font-size:22px">—</strong><small>Horário local</small></article></div><div class="layout2"><article class="card"><h3>Servidores disponíveis</h3><div id="overview-hosts" class="tabs"></div><div id="overview-summary" class="empty">Configure o token para carregar os hosts.</div></article><article class="card"><h3>Informações do monitoramento</h3><p class="muted">Selecione um servidor para consultar as métricas disponíveis e visualizar o histórico no painel.</p><p class="status" id="overview-status"></p><button class="btn secondary" data-go="servers">Abrir servidores →</button></article></div></section><section class="view" id="view-servers"><div class="heading"><div><h2>Servidores</h2><p class="muted">Selecione um host para explorar os itens monitorados</p></div></div><div class="card"><div class="tabs" id="server-tabs"></div><h3 id="selected-host">Nenhum servidor selecionado</h3><div class="tablewrap"><table><thead><tr><th>Métrica / Item</th><th>Último valor</th><th>Histórico</th></tr></thead><tbody id="items"></tbody></table></div><p class="status" id="server-status"></p></div></section><section class="view" id="view-history"><div class="heading"><div><h2>Histórico de métricas</h2><p class="muted" id="chart-title">Selecione uma métrica na aba Servidores</p></div><div class="toolbar"><label>Período<select id="days"><option value="1">24 horas</option><option value="7">7 dias</option><option value="30">30 dias</option><option value="90">90 dias</option><option value="365">365 dias</option></select></label></div></div><div class="card"><div class="chartbox"><canvas id="chart"></canvas></div><p id="chart-status" class="status"></p></div></section><section class="view" id="view-settings"><div class="heading"><div><h2>Configurações</h2><p class="muted">Integração Zabbix por token nativo · credenciais criptografadas</p></div></div><div class="card"><h3>Conexão Zabbix</h3><form id="settings-form" class="formgrid"><label>URL do Zabbix<input id="url" type="url" placeholder="https://zabbix.exemplo.com" required></label><label>Token da API<input id="token" type="password" autocomplete="new-password" placeholder="Deixe vazio para manter o token atual"></label><div class="wide"><button class="btn" type="submit">Salvar configurações</button></div></form><p class="status" id="settings-status"></p></div></section></main><footer class="footer"><span>Zabbix Dashboard · Painel de infraestrutura</span><span>Flask · PostgreSQL · Docker</span></footer></div></div></body></html>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101731">
+  <title>Zabbix Dashboard | Monitoramento</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js" defer></script>
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js" defer></script>
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}" type="module"></script>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar" aria-label="Navegação principal">
+    <div class="brand"><span class="brand-icon">◈</span><span>Zabbix Dashboard<small>INFRASTRUCTURE</small></span></div>
+    <nav class="nav">
+      <button class="active" data-view="overview">◫ &nbsp; Visão geral</button>
+      <button data-view="servers">▣ &nbsp; Servidores</button>
+      <button data-view="history">◷ &nbsp; Histórico</button>
+      <button data-view="settings">⚙ &nbsp; Configurações</button>
+    </nav>
+    <div class="sidefoot"><span id="ws-connection">WebSocket: conectando…</span><p>Zabbix API · PostgreSQL</p></div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar">
+      <div><h1>Central de Monitoramento</h1><p>Recursos, inventário e status dos servidores</p></div>
+      <div class="top-actions"><span class="pill" id="connection" aria-live="polite">● Aguardando token</span>
+        <form action="/logout" method="post"><button class="logout">Sair</button></form>
+      </div>
+    </header>
+    <main class="content">
+      <section class="view active" id="view-overview">
+        <div class="heading">
+          <div><h2>Visão geral <span class="accent">◈</span></h2>
+            <p class="muted">Indicadores alimentados pela API Zabbix</p></div>
+          <button class="btn" id="refresh" type="button">↻ Atualizar métricas</button>
+        </div>
+        <div class="grid">
+          <article class="card metric"><span class="label">Hosts disponíveis</span><strong id="total-hosts">—</strong><small>Hosts visíveis com o token</small></article>
+          <article class="card metric"><span class="label">Hosts habilitados</span><strong id="enabled-hosts" class="cyan">—</strong><small>Habilitados no Zabbix</small></article>
+          <article class="card metric"><span class="label">Problemas ativos</span><strong id="total-problems" class="pink">—</strong><small>Até 80 eventos recentes ativos</small></article>
+          <article class="card metric"><span class="label">Última sincronização</span><strong id="updated" class="compact-value">—</strong><small>Horário local de recebimento</small></article>
+        </div>
+        <div class="layout2">
+          <article class="card"><h3>Servidores disponíveis</h3>
+            <div class="tabs" id="overview-hosts"></div>
+            <div id="overview-summary" class="empty">Aguardando conexão com o Zabbix.</div>
+            <div id="overview-gauges" class="gauge-grid"></div>
+          </article>
+          <article class="card"><h3>Conexão e coleta</h3>
+            <p class="muted">Os valores são atualizados por Socket.IO a partir das coletas do backend Flask.</p>
+            <p class="status" id="overview-status"></p>
+            <button class="btn secondary" data-go="servers">Ver métricas por host →</button>
+          </article>
+        </div>
+        <article class="card sectiongap"><h3>Problemas ativos reportados pelo Zabbix</h3>
+          <div class="tablewrap"><table><thead><tr><th>Problema</th><th>Severidade</th><th>Ocorrência</th></tr></thead><tbody id="problems-body"></tbody></table></div>
+        </article>
+      </section>
+      <section class="view" id="view-servers">
+        <div class="heading"><div><h2>Servidores</h2><p class="muted">Abas de hosts, inventário de itens e recursos medidos</p></div></div>
+        <div class="card"><div class="tabs" id="server-tabs"></div><h3 id="selected-host">Selecione um host</h3>
+          <div class="gauge-grid" id="server-gauges"></div>
+          <div class="tablewrap"><table><thead><tr><th>Item monitorado</th><th>Valor atual</th><th>Histórico</th></tr></thead><tbody id="items"></tbody></table></div>
+          <p class="status" id="server-status"></p></div>
+      </section>
+      <section class="view" id="view-history">
+        <div class="heading"><div><h2>Histórico</h2><p class="muted" id="chart-title">Selecione uma métrica de um servidor</p></div>
+          <label>Período<select id="days"><option value="1">24 horas</option><option value="7">7 dias</option><option value="30">30 dias</option><option value="90">90 dias</option><option value="365">365 dias</option></select></label>
+        </div>
+        <div class="card"><div class="chartbox"><canvas id="chart"></canvas></div><p class="status" id="chart-status"></p></div>
+      </section>
+      <section class="view" id="view-settings">
+        <div class="heading"><div><h2>Configurações de integração</h2>
+            <p class="muted">Autenticação nativa por Bearer · token criptografado no PostgreSQL · sem usuário ou senha do Zabbix</p></div>
+        </div>
+        <div class="grid config-kpis">
+          <article class="card metric"><span class="label">API Zabbix</span><strong id="config-version" class="compact-value">—</strong><small>Versão identificada</small></article>
+          <article class="card metric"><span class="label">Token</span><strong id="config-token" class="compact-value">Pendente</strong><small>Nunca exibido após salvar</small></article>
+          <article class="card metric"><span class="label">Latência de validação</span><strong id="config-latency" class="compact-value">—</strong><small>Resposta do método host.get</small></article>
+          <article class="card metric"><span class="label">WebSocket</span><strong id="config-ws" class="compact-value">—</strong><small>Transporte do dashboard</small></article>
+        </div>
+        <div class="layout2">
+          <article class="card">
+            <h3>Credencial e conexão</h3>
+            <p class="muted">O servidor é definido na implantação. Para operar, informe somente o token da API Zabbix.</p>
+            <div class="formgrid">
+              <label class="wide">Endpoint JSON-RPC<input id="endpoint" type="text" readonly aria-readonly="true" value="Carregando…"></label>
+              <label class="wide">Autenticação<input type="text" readonly value="Authorization: Bearer &lt;API Token&gt;"></label>
+            </div>
+            <form id="settings-form" class="token-form">
+              <label>API Token <span class="muted">(token existente permanece salvo se você não o substituir)</span>
+                <input id="token" type="password" autocomplete="new-password" placeholder="Cole aqui o token gerado no Zabbix" required>
+              </label>
+              <div class="toolbar">
+                <button class="btn" id="save-token" type="submit">Validar e salvar token</button>
+                <button class="btn secondary" id="test-token" type="button">Testar token salvo</button>
+              </div>
+            </form>
+            <p id="settings-status" class="status" role="status" aria-live="polite"></p>
+          </article>
+          <article class="card">
+            <h3>Fluxo de atualização</h3>
+            <p class="muted">A API Zabbix é consultada via HTTP POST JSON-RPC pelo Flask. O Socket.IO distribui novos dados aos navegadores autenticados.</p>
+            <div class="detail-row"><span>Endpoint</span><strong>/api_jsonrpc.php</strong></div>
+            <div class="detail-row"><span>Intervalo de consulta</span><strong id="poll-interval">—</strong></div>
+            <div class="detail-row"><span>Autenticação Flask</span><strong>Senha administrativa</strong></div>
+            <div class="detail-row"><span>Autenticação Zabbix</span><strong>API Token</strong></div>
+            <div class="detail-row"><span>Última coleta</span><strong id="config-updated">—</strong></div>
+            <p id="integration-message" class="status"></p>
+          </article>
+        </div>
+        <article class="card sectiongap">
+          <div class="heading"><div><h3>Catálogo de métodos Zabbix 7.0</h3><p class="muted">Métodos de leitura implementados ou documentados. Verificação de permissão sob demanda.</p></div>
+            <button class="btn secondary" id="check-methods" type="button">Verificar permissões</button></div>
+          <div class="tablewrap"><table><thead><tr><th>Método</th><th>Uso no dashboard</th><th>Permissão / Teste</th><th>Latência</th></tr></thead><tbody id="method-body"></tbody></table></div>
+          <p class="status" id="methods-status"></p>
+        </article>
+      </section>
+    </main>
+    <footer class="footer"><span>Zabbix Dashboard · Monitoramento seguro</span><span>Flask · Socket.IO · PostgreSQL · Docker</span></footer>
+  </div>
+</div>
+</body></html>
