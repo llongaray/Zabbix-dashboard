@@ -113,7 +113,9 @@ def _kind(item):
         return None
     if key in ("vm.memory.util", "vm.memory.size[pused]"):
         return "memory"
-    if key.startswith("vfs.fs.size[") and "pused" in key.rsplit(",", 1)[-1]:
+    if key.startswith(("vfs.fs.size[", "vfs.fs.dependent.size[")) and (
+        "pused" in key.rsplit(",", 1)[-1]
+    ):
         return "disk"
     if key.startswith(("net.if.in[", "net.if.out[")):
         return "network_in" if key.startswith("net.if.in[") else "network_out"
@@ -126,7 +128,7 @@ def _score(item, kind, clock):
     """Prefere amostras recentes e o volume raiz/C: em discos."""
     key = str(item.get("key_", "")).lower()
     score = clock / 100_000_000
-    if kind == "disk" and any(part in key for part in ("[c:", '[/,', '["c:')):
+    if kind == "disk" and any(part in key for part in ("[c:", '[/,', '["c:', '[\"c:')):
         score += 20
     if kind == "cpu" and key in ("system.cpu.util", "system.cpu.util[]"):
         score += 10
