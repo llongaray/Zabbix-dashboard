@@ -1,13 +1,24 @@
 """Agregação compacta de indicadores para o dashboard."""
 from datetime import datetime, timezone
+from functools import lru_cache
 
 from app.services import zabbix
+
+
+@lru_cache(maxsize=1)
+def cached_version():
+    """Descobre a versão apenas uma vez por processo para reduzir chamadas."""
+    return zabbix.api_version()
 
 
 def snapshot():
     """Uma coleta para todos os navegadores, sem chamadas por usuário."""
     hosts = zabbix.hosts()
     warning = None
+    try:
+        version = cached_version()
+    except zabbix.ZabbixError:
+        version = None
     try:
         problems = zabbix.problems(80)
     except zabbix.ZabbixError as exc:
@@ -19,9 +30,10 @@ def snapshot():
         "kpis": {
             "hosts": len(hosts),
             "enabled": sum(str(host.get("status")) == "0" for host in hosts),
-            "active_problems": len(problems),
+            "active_problems": None if warning else len(problems),
         },
         "warning": warning,
+        "version": version,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
