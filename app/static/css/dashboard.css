@@ -144,9 +144,14 @@ input[readonly]{background:var(--siga-color-surface-subtle)}
 .config-kpis{grid-template-columns:1fr 1fr}}
 
 /* Gauge circular somente para métricas que o Zabbix retorna em %. */
-.progress-ring{--progress:0%;height:88px;width:88px;margin:8px auto;display:grid;place-items:center;border-radius:50%;background:conic-gradient(var(--siga-color-primary) var(--progress),var(--siga-color-surface-subtle) 0);position:relative}
-.progress-ring:before{content:"";position:absolute;inset:9px;border-radius:50%;background:var(--siga-color-surface-subtle)}
-.progress-ring span{position:relative;color:var(--siga-color-text);font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}
+.progress-ring{--progress:0deg;width:116px;height:58px;margin:6px auto 2px;position:relative;overflow:hidden;display:grid;place-items:end center}
+.progress-ring:before,.progress-ring:after{content:"";position:absolute;pointer-events:none;border-radius:50%;aspect-ratio:1;top:0;left:0;width:100%}
+.progress-ring:before{background:conic-gradient(from 270deg,var(--siga-color-primary) 0deg var(--progress),var(--siga-color-border) var(--progress) 180deg,transparent 180deg)}
+.progress-ring:after{top:8px;left:8px;width:calc(100% - 16px);background:var(--siga-color-surface-subtle)}
+.progress-ring span{position:relative;z-index:1;color:var(--siga-color-text);font-size:19px;font-weight:800;font-variant-numeric:tabular-nums}
+.gauge-trend{color:var(--siga-color-text-secondary);font-size:11px;min-height:20px}
+.gauge-trend canvas{display:block;width:100%;height:37px}
+.gauge-trend small{margin-top:3px;text-align:right}
 
 /* Layout: todos os grid tracks precisam aceitar conteúdo menor que o tamanho intrínseco. */
 html,body{width:100%;max-width:100%;overflow-x:clip}
@@ -170,8 +175,6 @@ html,body{width:100%;max-width:100%;overflow-x:clip}
 .gauge small{line-height:1.4;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}
 .gauge .name{font-weight:650;margin:0}
 .gauge .value{font-size:21px;overflow-wrap:anywhere}
-.progress-ring{width:76px;height:76px;flex:0 0 auto;margin:2px auto}
-.progress-ring span{font-size:15px}
 .gauge .metric-stale{color:var(--siga-color-warning)}
 .tablewrap{border:1px solid var(--siga-color-border);border-radius:var(--siga-radius-md);width:100%;max-width:100%;overflow-x:auto}
 .tablewrap table{width:100%;min-width:440px}
@@ -182,7 +185,7 @@ html,body{width:100%;max-width:100%;overflow-x:clip}
 @media(max-width:560px){.host-rail{grid-template-columns:28px minmax(0,1fr) 28px}
 .gauge-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 .gauge{padding:11px}
-.progress-ring{width:68px;height:68px}
+
 .topbar{flex-wrap:wrap}
 }
 

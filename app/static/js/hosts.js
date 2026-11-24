@@ -9,6 +9,75 @@ import {$, $$, createButton, setMessage, setText} from './state.js';
 let currentHosts = [];
 let selectedHost = null;
 let currentItems = [];
+let trendHost = '';
+let trendSeries = {};
+let trendRequestedAt = null;
+
+function refreshTrends(hostId, gauges) {
+  if (trendHost !== hostId) {
+    trendHost = hostId;
+    trendSeries = {};
+    trendRequestedAt = null;
+  }
+  if (!Object.keys(gauges).length ||
+      (trendRequestedAt !== null && Date.now() - trendRequestedAt < 60000)) return;
+  const requestedAt = trendRequestedAt = Date.now();
+  requestJSON('/api/history/local/' + encodeURIComponent(hostId) + '?days=1')
+    .then(payload => {
+      if (String(selectedHost?.hostid) !== hostId || trendRequestedAt !== requestedAt) return;
+      trendSeries = payload.series || {};
+      renderTrendLines();
+    }).catch(() => {
+      if (String(selectedHost?.hostid) === hostId && trendRequestedAt === requestedAt) renderTrendLines();
+    });
+}
+
+function renderTrendLines() {
+  for (const slot of $$('[data-metric-trend]')) {
+    const kind = slot.dataset.metricTrend;
+    const now = Date.now() / 1000;
+    const samples = (trendSeries[kind] || []).filter(sample =>
+      Number.isFinite(sample.value) && sample.units === slot.dataset.units &&
+      sample.clock >= now - 6 * 3600 && sample.clock <= now);
+    slot.replaceChildren();
+    if (samples.length < 2) {
+      slot.textContent = 'Histórico insuficiente nas últimas 6 h';
+      continue;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = 480;
+    canvas.height = 74;
+    canvas.setAttribute('role', 'img');
+    const format = new Intl.NumberFormat('pt-BR', {maximumFractionDigits: 2});
+    const minimum = Math.min(...samples.map(sample => sample.value));
+    const maximum = Math.max(...samples.map(sample => sample.value));
+    canvas.setAttribute('aria-label', 'Últimas 6 horas · mínimo ' +
+      format.format(minimum) + ' · máximo ' + format.format(maximum) + ' ' + slot.dataset.units);
+    slot.append(canvas);
+    const context = canvas.getContext('2d');
+    if (!context) continue;
+    const scale = kind === 'cpu' || kind === 'memory' ? 100 : Math.max(maximum, 0.001);
+    context.strokeStyle = getComputedStyle(slot).getPropertyValue('--siga-color-primary').trim();
+    context.lineWidth = 3;
+    context.lineJoin = 'round';
+    context.lineCap = 'round';
+    context.beginPath();
+    samples.forEach((sample, index) => {
+      const x = 2 + (sample.clock - (now - 6 * 3600)) / (6 * 3600) * 476;
+      const y = 70 - Math.min(1, Math.max(0, sample.value / scale)) * 66;
+      if (!index || sample.clock - samples[index - 1].clock > 3600) context.moveTo(x, y);
+      else context.lineTo(x, y);
+    });
+    context.stroke();
+    const caption = document.createElement('small');
+    caption.textContent = 'Últimas 6 h · pico ' + format.format(maximum) + ' ' + slot.dataset.units;
+    slot.append(caption);
+  }
+}
+
+new MutationObserver(renderTrendLines).observe(document.documentElement, {
+  attributes: true, attributeFilter: ['data-theme'],
+});
 let onHistory = null;
 let onWatch = null;
 
@@ -136,6 +205,7 @@ async function selectHost(host) {
   $$('[data-host-specs]').forEach(panel => { panel.hidden = true; });
   renderHostButtons();
   $('#overview-gauges').replaceChildren();
+  $('#server-gauges').replaceChildren();
   setText('#overview-selected-host', hostLabel(host));
   setText('#selected-host', hostLabel(host));
   setText('#overview-summary', 'Consultando ' + hostLabel(host) + '…');
@@ -248,7 +318,7 @@ function renderGauges(gauges) {
       if (percent) {
         const ring = document.createElement('div');
         ring.className = 'progress-ring';
-        ring.style.setProperty('--progress', value + '%');
+        ring.style.setProperty('--progress', value * 1.8 + 'deg');
         ring.setAttribute('role', 'img');
         ring.setAttribute('aria-label', name + ': ' + value.toFixed(1) + '%');
         const text = document.createElement('span');
@@ -261,6 +331,13 @@ function renderGauges(gauges) {
         number.textContent = metric ? String(metric.value) + ' ' +
           (metric.units || '') : 'N/D';
         card.append(heading, number, detail);
+      }
+      if (metric && kind !== 'disk') {
+        const trend = document.createElement('div');
+        trend.className = 'gauge-trend';
+        trend.dataset.metricTrend = kind;
+        trend.dataset.units = metric.units;
+        card.insertBefore(trend, detail);
       }
       fragment.append(card);
     }
@@ -337,7 +414,10 @@ export function renderItems(payload) {
   setText('#overview-summary', hostLabel(selectedHost) + ' · ' +
     currentItems.length + ' itens disponíveis');
   // Não inferir métricas de rede no frontend; apenas dados validados pelo backend.
-  renderGauges(payload.gauges || {});
+  const gauges = payload.gauges || {};
+  refreshTrends(String(payload.hostid), gauges);
+  renderGauges(gauges);
+  renderTrendLines();
   renderCoverage(payload.diagnostics || {});
   renderItemTable();
 }
