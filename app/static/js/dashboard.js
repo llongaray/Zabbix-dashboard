@@ -11,12 +11,15 @@ import {initializeCapacity} from './capacity.js';
 
 import {initializeReports} from './reports.js';
 
+import {renderOverviewCharts} from './monitor_charts.js';
+
 let stream = null;
 
 async function loadOnce() {
   try {
     const payload = await requestJSON('/api/snapshot');
     renderSnapshot(payload);
+    renderOverviewCharts(payload);
     updateHistoryHosts(payload.hosts);
     if (payload.version) document.querySelector('#config-version').textContent = payload.version;
     try {
@@ -58,6 +61,7 @@ async function initialize() {
     },
     onSnapshot: payload => {
       renderSnapshot(payload);
+      renderOverviewCharts(payload);
       updateHistoryHosts(payload.hosts);
       if (payload.version) {
         document.querySelector('#config-version').textContent = payload.version;

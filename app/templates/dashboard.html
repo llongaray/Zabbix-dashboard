@@ -19,6 +19,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#f7f7fb">
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
   <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
   <title>Zabbix Dashboard | Monitoramento</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/siga-ds.css') }}">
@@ -46,6 +47,7 @@
     <header class="topbar">
       <div><h1>Central de Monitoramento</h1><p>Recursos, inventário e status dos servidores</p></div>
       <div class="top-actions"><span class="siga-badge siga-badge--primary" id="connection" aria-live="polite">● Aguardando token</span>
+        <button class="siga-button siga-button--secondary" id="theme-toggle" type="button" aria-pressed="false">Tema escuro</button>
         <form action="/logout" method="post"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button class="siga-button siga-button--secondary">Sair</button></form>
       </div>
     </header>
@@ -62,6 +64,11 @@
           <article class="card metric"><span class="label">{{ icon("alert") }} Problemas ativos</span><strong id="total-problems" class="pink">—</strong><small>Até 80 eventos recentes ativos</small></article>
           <article class="card metric"><span class="label">{{ icon("calendar") }} Última sincronização</span><strong id="updated" class="compact-value">—</strong><small>Horário local de recebimento</small></article>
         </div>
+        <section class="monitor-charts sectiongap" aria-label="Gráficos de monitoramento">
+          <article class="card"><h3>Estado dos servidores</h3><div id="monitor-host-chart" class="bar-chart"></div></article>
+          <article class="card"><h3>Problemas ativos por severidade</h3><div id="monitor-severity-chart" class="bar-chart"></div></article>
+          <article class="card"><h3>Problemas ativos por dia de abertura</h3><div id="monitor-age-chart" class="bar-chart"></div></article>
+        </section>
         <article class="card sectiongap overview-connection">
           <span class="overview-section-icon">{{ icon("info") }}</span>
           <div><h3>Conexão e coleta</h3><p class="muted">Atualização automática das métricas do Zabbix</p></div>
@@ -145,9 +152,15 @@
         </article>
       </section>
       <section class="view" id="view-reports">
-        <article class="card">
+        <div class="heading"><div><h2>Relatórios</h2><p>Analise incidentes, disponibilidade e qualidade da coleta.</p></div></div>
+        <nav class="report-nav" aria-label="Tipo de relatório">
+          <button class="siga-button active" type="button" data-report="incidents" aria-pressed="true">Incidentes</button>
+          <button class="siga-button" type="button" data-report="sla" aria-pressed="false">Disponibilidade</button>
+          <button class="siga-button" type="button" data-report="collection" aria-pressed="false">Saúde da coleta</button>
+        </nav>
+        <article class="card report-panel" data-report-panel="incidents">
           <h3>Incidentes históricos</h3>
-          <form id="incident-filters">
+          <form class="report-filters" id="incident-filters">
             <label>Período <select name="days"><option value="7">7 dias</option><option value="30" selected>30 dias</option><option value="90">90 dias</option></select></label>
             <label>Grupo <select name="group" id="report-groups"><option value="">Todos</option></select></label>
             <label>Severidade <select name="severity"><option value="">Todas</option><option value="0">Não classificada</option><option value="1">Informação</option><option value="2">Atenção</option><option value="3">Média</option><option value="4">Alta</option><option value="5">Desastre</option></select></label>
@@ -156,17 +169,20 @@
             <button class="siga-button" id="incidents-csv" type="button">Baixar CSV</button>
           </form>
           <p class="status" id="incident-status" role="status"></p>
-          <ul id="incident-recurring" aria-label="Gatilhos recorrentes"></ul>
+          <div class="report-visuals" id="incident-visuals" hidden>
+            <section><h4>Últimos dias com incidentes</h4><div class="bar-chart" id="incident-days"></div></section>
+            <section><h4>Gatilhos mais recorrentes</h4><div class="bar-chart" id="incident-recurring"></div></section>
+          </div>
           <div class="tablewrap"><table><thead><tr><th>Problema</th><th>Hosts</th><th>Severidade</th><th>Abertura</th><th>Estado</th><th>Até reconhecer</th><th>Até recuperar</th></tr></thead><tbody id="incident-rows"></tbody></table></div>
         </article>
-        <article class="card sectiongap">
+        <article class="card report-panel" data-report-panel="sla" hidden>
           <h3>Disponibilidade por SLA</h3>
           <button class="siga-button" id="load-slas" type="button">Carregar SLAs</button>
           <label>SLA <select id="report-sla"><option value="">Selecione</option></select></label>
           <p class="status" id="sla-status" role="status"></p>
           <div class="tablewrap"><table><thead><tr><th>Serviço</th><th>Período</th><th>Disponibilidade</th><th>Indisponibilidade</th><th>Orçamento restante</th></tr></thead><tbody id="sla-rows"></tbody></table></div>
         </article>
-        <article class="card sectiongap">
+        <article class="card report-panel" data-report-panel="collection" hidden>
           <h3>Saúde da coleta</h3>
           <button class="siga-button" id="load-collection" type="button">Consultar coleta</button>
           <p class="status" id="collection-status" role="status"></p>

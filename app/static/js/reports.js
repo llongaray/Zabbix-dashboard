@@ -1,5 +1,6 @@
 import {requestJSON} from './api.js';
-import {$, setMessage} from './state.js';
+import {$, $$, setMessage} from './state.js';
+import {bars, dayBuckets} from './monitor_charts.js';
 
 const date = seconds => new Date(seconds * 1000).toLocaleString('pt-BR');
 const duration = seconds => seconds == null ? '—' :
@@ -23,6 +24,15 @@ async function load(status, action) {
 }
 
 export function initializeReports() {
+  $$('[data-report]').forEach(button => button.addEventListener('click', () => {
+    $$('[data-report]').forEach(tab => {
+      tab.classList.toggle('active', tab === button);
+      tab.setAttribute('aria-pressed', String(tab === button));
+    });
+    $$('[data-report-panel]').forEach(panel => {
+      panel.hidden = panel.dataset.reportPanel !== button.dataset.report;
+    });
+  }));
   const filters = $('#incident-filters');
   const incidentUrl = () => '/api/reports/incidents?' + new URLSearchParams(new FormData(filters));
   $('[data-view="reports"]').addEventListener('click', async () => {
@@ -46,11 +56,9 @@ export function initializeReports() {
         row.name, row.hosts, row.severity, date(row.opened_at),
         row.resolved ? 'Resolvido' : 'Aberto', duration(row.ack_seconds), duration(row.recovery_seconds),
       ]));
-      $('#incident-recurring').replaceChildren(...data.recurring.map(entry => {
-        const item = document.createElement('li');
-        item.textContent = entry.name + ' · ' + entry.count;
-        return item;
-      }));
+      $('#incident-visuals').hidden = !data.rows.length;
+      bars('#incident-days', dayBuckets(data.rows));
+      bars('#incident-recurring', data.recurring.map(entry => [entry.name, entry.count, 'info']));
       setMessage('#incident-status', data.open + ' abertos · ' + data.resolved +
         ' resolvidos · Recuperação média ' + duration(data.mean_recovery_seconds) +
         (data.rows.length > 200 ? ' · Até 200 linhas na tela' : '') +
