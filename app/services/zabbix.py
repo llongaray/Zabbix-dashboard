@@ -36,6 +36,10 @@ def base_url():
     return configured
 
 
+def api_endpoint():
+    return base_url() + "/api_jsonrpc.php"
+
+
 def stored_token():
     encrypted = get_setting("zabbix_token")
     if encrypted:
@@ -61,7 +65,7 @@ def call(method, params=None, *, token=None):
         headers["Authorization"] = "Bearer " + token
     try:
         response = requests.post(
-            base_url() + "/api_jsonrpc.php",
+            api_endpoint(),
             headers=headers,
             json={"jsonrpc": "2.0", "method": method, "params": params or {}, "id": 1},
             # Itens volumosos e problemas podem levar mais tempo que host.get.

@@ -68,7 +68,7 @@ def test_connection():
 @protected
 def catalog():
     return jsonify({
-        "endpoint": zabbix.base_url() + "/api_jsonrpc.php",
+        "endpoint": zabbix.api_endpoint(),
         "transport": "HTTP POST JSON-RPC 2.0",
         "authentication": "Bearer API Token",
         "methods": methods(),

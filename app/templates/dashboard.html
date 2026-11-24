@@ -204,7 +204,7 @@
             <h3>Credencial e conexão</h3>
             <p class="muted">O servidor é definido na implantação. Para operar, informe somente o token da API Zabbix.</p>
             <div class="formgrid">
-              <label class="wide">Endpoint JSON-RPC<input class="siga-input" id="endpoint" type="text" readonly aria-readonly="true" value="Carregando…"></label>
+              <label class="wide">Endpoint JSON-RPC<input class="siga-input" id="endpoint" type="text" readonly aria-readonly="true" value="{{ zabbix_endpoint or 'Endpoint indisponível' }}"></label>
               <label class="wide">Autenticação<input class="siga-input" type="text" readonly value="Authorization: Bearer &lt;API Token&gt;"></label>
             </div>
             <form id="settings-form" class="token-form">

@@ -17,7 +17,6 @@ export async function loadConfiguration() {
   let config = {token_configured: false, token_source: 'none'};
   try {
     config = await requestJSON('/api/config');
-    setText('#endpoint', config.zabbix_url + '/api_jsonrpc.php');
     setText('#poll-interval', config.poll_interval + ' segundos');
     setText('#config-token', config.token_configured ? 'Disponível' : 'Pendente');
     const source = {
@@ -38,7 +37,6 @@ export async function loadConfiguration() {
 
   try {
     const catalog = await requestJSON('/api/catalog');
-    setText('#endpoint', catalog.endpoint);
     methods = catalog.methods || [];
     renderCatalog({});
   } catch (error) {

@@ -11,6 +11,7 @@ from flask import jsonify, redirect, render_template, request, session
 from app.routes import bp
 from app.routes.decorators import same_origin
 from app.realtime import revoke_session
+from app.services.zabbix import ZabbixError, api_endpoint
 
 
 _login_attempts = OrderedDict()
@@ -67,7 +68,11 @@ def logout():
 def home():
     if not session.get("admin"):
         return redirect("/login")
-    return render_template("dashboard.html")
+    try:
+        endpoint = api_endpoint()
+    except ZabbixError:
+        endpoint = None
+    return render_template("dashboard.html", zabbix_endpoint=endpoint)
 
 
 @bp.get("/api/session")
