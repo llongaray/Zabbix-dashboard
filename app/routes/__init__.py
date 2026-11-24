@@ -27,4 +27,4 @@ def api_error(exc):
 
 
 # Os imports registram rotas no blueprint. Não importá-los antes de criar bp.
-from app.routes import auth, history, monitoring, settings, smtp  # noqa: E402,F401
+from app.routes import analytics, auth, history, monitoring, settings, smtp  # noqa: E402,F401

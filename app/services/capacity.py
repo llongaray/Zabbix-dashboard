@@ -57,19 +57,36 @@ def report():
     item_ids = []
     for host in hosts:
         record = cache.get("host:" + str(host["hostid"])) or {}
-        gauge = record.get("gauges", {}).get("memory") or {}
+        gauges = record.get("gauges", {})
+        gauge = gauges.get("memory") or {}
+        metrics = {kind: str(gauges[kind]["itemid"]) for kind in ("cpu", "memory", "disk")
+                   if (gauges.get(kind) or {}).get("itemid")}
+        item_ids.extend(metrics.values())
         capacity = (record.get("specs") or {}).get("ram_bytes")
         total_item = next((item["itemid"] for item in record.get("items", [])
                            if item["key_"] == "vm.memory.size[total]"), None)
-        sources.append((host, gauge, capacity, total_item))
+        sources.append((host, gauge, capacity, total_item, metrics))
         if gauge.get("itemid") and total_item and capacity:
             item_ids.extend((str(gauge["itemid"]), str(total_item)))
-    series = trends(item_ids, start, hour - 1)
+    series = trends(item_ids, start - HOURS * 3600, hour - 1)
     rows = []
-    for host, gauge, capacity, total_item in sources:
+    for host, gauge, capacity, total_item, metrics in sources:
         samples = {stamp: high for stamp, (low, high) in series[str(gauge.get("itemid"))].items()
-                   if 0 <= low <= high <= 100}
-        totals = series[str(total_item)]
+                   if start <= stamp < hour and 0 <= low <= high <= 100}
+        totals = {stamp: values for stamp, values in series[str(total_item)].items()
+                  if start <= stamp < hour}
+        metric_summary = {}
+        for kind, item_id in metrics.items():
+            samples_by_hour = series[item_id]
+            windows = []
+            for left, right in ((start, hour), (start - HOURS * 3600, start)):
+                peaks = [high for stamp, (low, high) in samples_by_hour.items()
+                         if left <= stamp < right and 0 <= low <= high <= 100]
+                windows.append({
+                    "peak": max(peaks, default=None),
+                    "coverage": round(len(peaks) * 100 / HOURS, 1),
+                })
+            metric_summary[kind] = windows
         peak = max(samples.values(), default=None)
         coverage = len(samples) * 100 / HOURS
         capacity_gib = capacity / GIB if capacity else None
@@ -95,6 +112,7 @@ def report():
             "total_gib": capacity_gib, "peak_pct": peak,
             "peak_gib": peak_gib,
             "coverage_pct": round(coverage, 1), "status": status,
+            "metrics": metric_summary,
             "releasable_gib": releasable, "needed_gib": needed,
         })
     return {

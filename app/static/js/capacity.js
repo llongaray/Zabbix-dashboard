@@ -4,6 +4,12 @@ import {$, setMessage, setText} from './state.js';
 const format = new Intl.NumberFormat('pt-BR', {maximumFractionDigits: 1});
 const gib = value => value == null ? '—' : format.format(value) + ' GiB';
 
+function comparison(windows) {
+  if (!windows) return '—';
+  return windows.map(window => window.peak == null ? 'Sem dados' :
+    format.format(window.peak) + '% (' + format.format(window.coverage) + '% cobertura)').join(' / ');
+}
+
 function render(report) {
   const table = $('#capacity-rows');
   const rows = report.hosts.map(host => {
@@ -12,7 +18,8 @@ function render(report) {
       format.format(host.peak_pct) + '%' + (host.peak_gib == null ? '' : ' · ' + gib(host.peak_gib));
     const columns = [host.name, gib(host.total_gib), peak,
       format.format(host.coverage_pct) + '%', gib(host.releasable_gib || null),
-      gib(host.needed_gib || null), host.status];
+      gib(host.needed_gib || null), host.status,
+      ...['cpu', 'memory', 'disk'].map(kind => comparison(host.metrics?.[kind]))];
     columns.forEach((value, index) => {
       const cell = document.createElement(index === 0 ? 'th' : 'td');
       if (index === 0) cell.scope = 'row';

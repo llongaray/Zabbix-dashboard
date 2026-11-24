@@ -15,6 +15,7 @@
 {%- endmacro %}
 <html lang="pt-BR">
 <head>
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#f7f7fb">
@@ -22,8 +23,8 @@
   <title>Zabbix Dashboard | Monitoramento</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/siga-ds.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js" defer></script>
-  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js" integrity="sha384-T/4KgSWuZEPozpPz7rnnp/5lDSnpY1VPJCojf1S81uTHS1E38qgLfMgVsAeRCWc4" crossorigin="anonymous" defer></script>
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js" integrity="sha384-mkQ3/7FUtcGyoppY6bz/PORYoGqOl7/aSUMn2ymDOJcapfS6PHqxhRTMh1RR0Q6+" crossorigin="anonymous" defer></script>
   <script src="{{ url_for('static', filename='js/dashboard.js') }}" type="module"></script>
 </head>
 <body>
@@ -36,6 +37,7 @@
       <button data-view="servers"> {{ icon("document") }} Servidores</button>
       <button data-view="history"> {{ icon("calendar") }} Histórico</button>
       <button data-view="capacity"> {{ icon("overview") }} Capacidade</button>
+      <button data-view="reports"> {{ icon("document") }} Relatórios</button>
       <button data-view="settings"> {{ icon("settings") }} Configurações</button>
     </nav>
     <div class="sidefoot"><span id="ws-connection">WebSocket: conectando…</span><p>Zabbix API · PostgreSQL</p></div>
@@ -44,7 +46,7 @@
     <header class="topbar">
       <div><h1>Central de Monitoramento</h1><p>Recursos, inventário e status dos servidores</p></div>
       <div class="top-actions"><span class="siga-badge siga-badge--primary" id="connection" aria-live="polite">● Aguardando token</span>
-        <form action="/logout" method="post"><button class="siga-button siga-button--secondary">Sair</button></form>
+        <form action="/logout" method="post"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button class="siga-button siga-button--secondary">Sair</button></form>
       </div>
     </header>
     <main class="content">
@@ -134,11 +136,41 @@
           <p class="muted history-footnote">Confirme o compartilhamento de recursos entre VMs ou a compatibilidade dos módulos físicos antes de remanejar RAM.</p>
         </article>
         <article class="card sectiongap">
-          <h3>Histórico de RAM por servidor</h3>
+          <h3>Capacidade por servidor</h3>
+          <p class="muted">Picos e cobertura dos últimos 30 dias completos em comparação aos 30 anteriores.</p>
           <div class="tablewrap"><table class="capacity-table"><thead><tr>
             <th>Servidor</th><th>RAM total</th><th>Pico registrado</th><th>Cobertura</th>
-            <th>Folga estimada</th><th>RAM adicional</th><th>Qualidade dos dados</th>
+            <th>Folga estimada</th><th>RAM adicional</th><th>Qualidade dos dados</th><th>CPU</th><th>RAM</th><th>Disco monitorado</th>
           </tr></thead><tbody id="capacity-rows"></tbody></table></div>
+        </article>
+      </section>
+      <section class="view" id="view-reports">
+        <article class="card">
+          <h3>Incidentes históricos</h3>
+          <form id="incident-filters">
+            <label>Período <select name="days"><option value="7">7 dias</option><option value="30" selected>30 dias</option><option value="90">90 dias</option></select></label>
+            <label>Grupo <select name="group" id="report-groups"><option value="">Todos</option></select></label>
+            <label>Severidade <select name="severity"><option value="">Todas</option><option value="0">Não classificada</option><option value="1">Informação</option><option value="2">Atenção</option><option value="3">Média</option><option value="4">Alta</option><option value="5">Desastre</option></select></label>
+            <label>Nome da tag <input name="tag" maxlength="255"></label>
+            <button class="siga-button siga-button--primary">Consultar</button>
+            <button class="siga-button" id="incidents-csv" type="button">Baixar CSV</button>
+          </form>
+          <p class="status" id="incident-status" role="status"></p>
+          <ul id="incident-recurring" aria-label="Gatilhos recorrentes"></ul>
+          <div class="tablewrap"><table><thead><tr><th>Problema</th><th>Hosts</th><th>Severidade</th><th>Abertura</th><th>Estado</th><th>Até reconhecer</th><th>Até recuperar</th></tr></thead><tbody id="incident-rows"></tbody></table></div>
+        </article>
+        <article class="card sectiongap">
+          <h3>Disponibilidade por SLA</h3>
+          <button class="siga-button" id="load-slas" type="button">Carregar SLAs</button>
+          <label>SLA <select id="report-sla"><option value="">Selecione</option></select></label>
+          <p class="status" id="sla-status" role="status"></p>
+          <div class="tablewrap"><table><thead><tr><th>Serviço</th><th>Período</th><th>Disponibilidade</th><th>Indisponibilidade</th><th>Orçamento restante</th></tr></thead><tbody id="sla-rows"></tbody></table></div>
+        </article>
+        <article class="card sectiongap">
+          <h3>Saúde da coleta</h3>
+          <button class="siga-button" id="load-collection" type="button">Consultar coleta</button>
+          <p class="status" id="collection-status" role="status"></p>
+          <div class="tablewrap"><table><thead><tr><th>Tipo</th><th>Nome</th><th>Host</th></tr></thead><tbody id="collection-rows"></tbody></table></div>
         </article>
       </section>
       <section class="view" id="view-settings">

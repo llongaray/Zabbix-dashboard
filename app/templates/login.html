@@ -24,6 +24,7 @@
         <h2 id="login-title">Acesso ao dashboard</h2>
         {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
         <form method="post" action="{{ url_for('dashboard.login') }}">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
           <label class="siga-field__label" for="password">Senha administrativa</label>
           <div class="password">
             <input class="siga-input" id="password" name="password" type="password" autocomplete="current-password" required autofocus>
@@ -34,14 +35,6 @@
       </div>
     </section>
   </main>
-  <script>
-    const toggle = document.querySelector('#toggle');
-    const password = document.querySelector('#password');
-    toggle.addEventListener('click', () => {
-      const show = password.type === 'password';
-      password.type = show ? 'text' : 'password';
-      toggle.textContent = show ? 'Ocultar senha' : 'Mostrar senha';
-    });
-  </script>
+  <script src="{{ url_for('static', filename='js/login.js') }}" defer></script>
 </body>
 </html>

@@ -5,6 +5,7 @@ valores já salvos, sem bloquear a renderização nem iniciar coleta remota.
 """
 import re
 import threading
+import time
 
 from flask import request, session
 from flask_socketio import SocketIO
@@ -16,6 +17,17 @@ _lock = threading.Lock()
 _wake = threading.Event()
 _started = False
 _watchers = {}
+_connections = {}
+
+
+def revoke_session(login_id):
+    if not login_id:
+        return
+    with _lock:
+        sockets = [sid for sid, (owner, _) in _connections.items() if owner == login_id]
+    for sid in sockets:
+        socketio.server.disconnect(sid, namespace="/")
+
 _last_snapshot_stamp = None
 _last_hosts_stamps = {}
 
@@ -30,6 +42,11 @@ def _broadcast_cache():
     global _last_snapshot_stamp
     while True:
         try:
+            now = time.time()
+            with _lock:
+                expired = [sid for sid, (_, expires) in _connections.items() if expires <= now]
+            for sid in expired:
+                socketio.server.disconnect(sid, namespace="/")
             overview = cache.get("overview")
             if overview and overview.get("cached_at") != _last_snapshot_stamp:
                 _last_snapshot_stamp = overview["cached_at"]
@@ -72,6 +89,8 @@ def connect(auth=None):
     except Exception:
         pass
     with _lock:
+        if session.get("login_id"):
+            _connections[request.sid] = (session["login_id"], session["login_expires"])
         if not _started:
             _started = True
             socketio.start_background_task(_broadcast_cache)
@@ -81,6 +100,7 @@ def connect(auth=None):
 @socketio.on("disconnect")
 def disconnect():
     with _lock:
+        _connections.pop(request.sid, None)
         _watchers.pop(request.sid, None)
         _last_hosts_stamps.pop(request.sid, None)
 

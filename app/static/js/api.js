@@ -34,7 +34,8 @@ export async function requestJSON(path, options = {}) {
 export function postJSON(path, body = {}) {
   return requestJSON(path, {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
+    headers: {'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content || ''},
     body: JSON.stringify(body),
   });
 }

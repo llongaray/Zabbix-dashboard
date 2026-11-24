@@ -9,6 +9,8 @@ import {connectStream} from './socket.js';
 import {initializeSmtp} from './smtp.js';
 import {initializeCapacity} from './capacity.js';
 
+import {initializeReports} from './reports.js';
+
 let stream = null;
 
 async function loadOnce() {
@@ -38,6 +40,7 @@ function requestRefresh() {
 async function initialize() {
   initializeNavigation();
   initializeCapacity();
+  initializeReports();
   initializeSmtp();
   initializeHistory();
   initializeHosts({
