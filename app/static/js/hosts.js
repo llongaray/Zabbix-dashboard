@@ -46,7 +46,7 @@ function renderTrendLines() {
     }
     const canvas = document.createElement('canvas');
     canvas.width = 480;
-    canvas.height = 74;
+    canvas.height = 112;
     canvas.setAttribute('role', 'img');
     const format = new Intl.NumberFormat('pt-BR', {maximumFractionDigits: 2});
     const minimum = Math.min(...samples.map(sample => sample.value));
@@ -61,10 +61,12 @@ function renderTrendLines() {
     context.lineWidth = 3;
     context.lineJoin = 'round';
     context.lineCap = 'round';
+    const start = samples[0].clock;
+    const span = Math.max(1, samples.at(-1).clock - start);
     context.beginPath();
     samples.forEach((sample, index) => {
-      const x = 2 + (sample.clock - (now - 6 * 3600)) / (6 * 3600) * 476;
-      const y = 70 - Math.min(1, Math.max(0, sample.value / scale)) * 66;
+      const x = 3 + (sample.clock - start) / span * 474;
+      const y = 106 - Math.min(1, Math.max(0, sample.value / scale)) * 100;
       if (!index || sample.clock - samples[index - 1].clock > 3600) context.moveTo(x, y);
       else context.lineTo(x, y);
     });
@@ -300,10 +302,12 @@ function renderGauges(gauges) {
       const metric = gauges?.[kind];
       const card = document.createElement('article');
       card.className = 'gauge';
+      if (['cpu', 'memory', 'disk'].includes(kind)) card.classList.add('gauge-percentage');
       const heading = document.createElement('p');
       heading.className = 'name';
       heading.append(metricIcon(gaugeIcons[kind]), name);
       const detail = document.createElement('small');
+      detail.className = 'gauge-detail';
       detail.title = metric?.name || '';
       detail.textContent = metric?.name || 'Métrica não disponível no Zabbix';
       if (metric && metric.stale) {
