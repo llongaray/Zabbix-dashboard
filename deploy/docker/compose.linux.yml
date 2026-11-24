@@ -1,0 +1,7 @@
+services:
+  dashboard:
+    security_opt:
+      - no-new-privileges:true
+  collector:
+    security_opt:
+      - no-new-privileges:true

@@ -298,3 +298,7 @@ novos problemas do Zabbix após a ativação, respeitando a supressão no Zabbix
 para evitar duplicação entre grupos com o mesmo remetente e destinatário.
 Em **Grupos de alerta**, o painel mostra os envios confirmados pelo SMTP e os envios
 sem confirmação nas últimas 24 horas, além do horário da última verificação do coletor.
+
+## Implantação Linux
+
+Consulte o [guia de instalação e atualização](docs/install-linux.md).
