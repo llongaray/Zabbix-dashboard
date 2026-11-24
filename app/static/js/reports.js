@@ -1,5 +1,5 @@
 import {requestJSON} from './api.js';
-import {$, $$, setMessage} from './state.js';
+import {$, $$, setMessage, onView} from './state.js';
 import {bars, dayBuckets} from './monitor_charts.js';
 
 const date = seconds => new Date(seconds * 1000).toLocaleString('pt-BR');
@@ -35,7 +35,7 @@ export function initializeReports() {
   }));
   const filters = $('#incident-filters');
   const incidentUrl = () => '/api/reports/incidents?' + new URLSearchParams(new FormData(filters));
-  $('[data-view="reports"]').addEventListener('click', async () => {
+  onView('reports', async () => {
     const select = $('#report-groups');
     if (select.options.length > 1) return;
     try {

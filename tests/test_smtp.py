@@ -83,7 +83,7 @@ def test_microsoft_callback_requires_state_and_verifies_oauth(monkeypatch):
     result = client.get("/smtp/microsoft/callback", query_string={
         "code": "code", "state": query["state"][0],
     })
-    assert result.location == "/#smtp"
+    assert result.location == "/configuracoes#smtp"
     verify.assert_called_once_with("microsoft", "admin@example.com", "access", oauth=True)
     saved = save.call_args.args[0]
     assert saved["oauth"] and mailing.decrypt(saved["secret"]) == "refresh"

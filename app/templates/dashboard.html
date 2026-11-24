@@ -34,12 +34,12 @@
     <div class="brand"><span class="brand-icon">◈</span><span>Zabbix Dashboard<small>Monitoramento Zabbix</small></span></div>
     <p class="nav-label">Navegação</p>
     <nav class="nav">
-      <button class="active" data-view="overview"> {{ icon("overview") }} Visão geral</button>
-      <button data-view="servers"> {{ icon("document") }} Servidores</button>
-      <button data-view="history"> {{ icon("calendar") }} Histórico</button>
-      <button data-view="capacity"> {{ icon("overview") }} Capacidade</button>
-      <button data-view="reports"> {{ icon("document") }} Relatórios</button>
-      <button data-view="settings"> {{ icon("settings") }} Configurações</button>
+      <a href="{{ url_for('dashboard.home', view='overview') }}" data-view="overview" {% if active_view == 'overview' %}class="active" aria-current="page"{% endif %}> {{ icon("overview") }} Visão geral</a>
+      <a href="{{ url_for('dashboard.home', view='servers') }}" data-view="servers" {% if active_view == 'servers' %}class="active" aria-current="page"{% endif %}> {{ icon("document") }} Servidores</a>
+      <a href="{{ url_for('dashboard.home', view='history') }}" data-view="history" {% if active_view == 'history' %}class="active" aria-current="page"{% endif %}> {{ icon("calendar") }} Histórico</a>
+      <a href="{{ url_for('dashboard.home', view='capacity') }}" data-view="capacity" {% if active_view == 'capacity' %}class="active" aria-current="page"{% endif %}> {{ icon("overview") }} Capacidade</a>
+      <a href="{{ url_for('dashboard.home', view='reports') }}" data-view="reports" {% if active_view == 'reports' %}class="active" aria-current="page"{% endif %}> {{ icon("document") }} Relatórios</a>
+      <a href="{{ url_for('dashboard.home', view='settings') }}" data-view="settings" {% if active_view == 'settings' %}class="active" aria-current="page"{% endif %}> {{ icon("settings") }} Configurações</a>
     </nav>
     <div class="sidefoot"><span id="ws-connection">WebSocket: conectando…</span><p>Zabbix API · PostgreSQL</p></div>
   </aside>
@@ -52,7 +52,7 @@
       </div>
     </header>
     <main class="content">
-      <section class="view active" id="view-overview">
+      <section class="view{% if active_view == 'overview' %} active{% endif %}" id="view-overview">
         <div class="heading">
           <div><h2>Visão geral</h2>
             <p class="muted">Indicadores alimentados pela API Zabbix</p></div>
@@ -97,7 +97,7 @@
           <div class="tablewrap"><table><thead><tr><th>Problema</th><th>Severidade</th><th>Ocorrência</th></tr></thead><tbody id="problems-body"></tbody></table></div>
         </article>
       </section>
-      <section class="view" id="view-servers">
+      <section class="view{% if active_view == 'servers' %} active{% endif %}" id="view-servers">
         <div class="heading"><div><h2>Servidores</h2><p class="muted">Abas de hosts, inventário de itens e recursos medidos</p></div></div>
         <div class="card"><div class="host-tools"><input class="siga-input" id="server-host-search" type="search" placeholder="Buscar servidor" aria-label="Buscar servidores da aba Servidores"><span id="server-host-count" class="host-count">0 hosts</span></div><div class="host-rail"><button type="button" class="host-arrow" data-scroll-target="server-tabs" data-scroll-dir="-1" aria-label="Servidores anteriores">‹</button><div class="tabs" id="server-tabs"></div><button type="button" class="host-arrow" data-scroll-target="server-tabs" data-scroll-dir="1" aria-label="Próximos servidores">›</button></div><h3 id="selected-host">Selecione um host</h3>
           {{ host_specifications() }}
@@ -106,7 +106,7 @@
           <div class="tablewrap"><table><thead><tr><th>Item monitorado</th><th>Valor atual</th><th>Histórico</th></tr></thead><tbody id="items"></tbody></table></div>
           <p class="status" id="server-status"></p></div>
       </section>
-      <section class="view" id="view-history">
+      <section class="view{% if active_view == 'history' %} active{% endif %}" id="view-history">
         <div class="heading">
           <div><h2>Histórico de infraestrutura</h2><p class="muted">Séries oficiais do Zabbix; prévia local a partir do PostgreSQL</p></div>
           <div class="toolbar">
@@ -130,7 +130,7 @@
         </div>
         <p class="muted history-footnote">CPU, RAM e disco usam limites percentuais. Rede usa Mbps e só aplica limites percentuais quando a velocidade da interface estiver disponível no Zabbix. Sem coleta ou retenção, o gráfico informa a ausência de dados.</p>
       </section>
-      <section class="view" id="view-capacity">
+      <section class="view{% if active_view == 'capacity' %} active{% endif %}" id="view-capacity">
         <div class="heading">
           <div><h2>Capacidade de memória</h2><p class="muted">Picos de uso e oportunidades de remanejamento de RAM</p></div>
           <button class="siga-button siga-button--primary" id="capacity-refresh" type="button">Atualizar análise</button>
@@ -151,7 +151,7 @@
           </tr></thead><tbody id="capacity-rows"></tbody></table></div>
         </article>
       </section>
-      <section class="view" id="view-reports">
+      <section class="view{% if active_view == 'reports' %} active{% endif %}" id="view-reports">
         <div class="heading"><div><h2>Relatórios</h2><p>Analise incidentes, disponibilidade e qualidade da coleta.</p></div></div>
         <nav class="report-nav" aria-label="Tipo de relatório">
           <button class="siga-button active" type="button" data-report="incidents" aria-pressed="true">Incidentes</button>
@@ -189,7 +189,7 @@
           <div class="tablewrap"><table><thead><tr><th>Tipo</th><th>Nome</th><th>Host</th></tr></thead><tbody id="collection-rows"></tbody></table></div>
         </article>
       </section>
-      <section class="view" id="view-settings">
+      <section class="view{% if active_view == 'settings' %} active{% endif %}" id="view-settings">
         <div class="heading"><div><h2>Configurações de integração</h2>
             <p class="muted">Autenticação nativa por Bearer · token criptografado no PostgreSQL · sem usuário ou senha do Zabbix</p></div>
         </div>

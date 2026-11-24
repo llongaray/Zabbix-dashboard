@@ -6,7 +6,7 @@ from secrets import token_urlsafe
 import time
 from hmac import compare_digest
 
-from flask import jsonify, redirect, render_template, request, session
+from flask import jsonify, redirect, render_template, request, session, url_for
 
 from app.routes import bp
 from app.routes.decorators import same_origin
@@ -45,12 +45,13 @@ def login():
         expected = os.getenv("ADMIN_PASSWORD", "")
         if expected and compare_digest(password.encode("utf-8"), expected.encode("utf-8")):
             revoke_session(session.get("login_id"))
+            destination = session.get("dashboard_destination", "overview")
             session.clear()
             session.permanent = True
             session["admin"] = True
             session["login_id"] = token_urlsafe(32)
             session["login_expires"] = time.time() + 8 * 3600
-            return redirect("/")
+            return redirect(url_for("dashboard.home", view=destination))
         return render_template("login.html", error="Senha administrativa inválida."), 401
     return render_template("login.html")
 
@@ -64,15 +65,21 @@ def logout():
     return redirect("/login")
 
 
-@bp.get("/")
-def home():
+@bp.get("/", defaults={"view": "overview"})
+@bp.get("/servidores", defaults={"view": "servers"})
+@bp.get("/historico", defaults={"view": "history"})
+@bp.get("/capacidade", defaults={"view": "capacity"})
+@bp.get("/relatorios", defaults={"view": "reports"})
+@bp.get("/configuracoes", defaults={"view": "settings"})
+def home(view):
     if not session.get("admin"):
-        return redirect("/login")
+        session["dashboard_destination"] = view
+        return redirect(url_for("dashboard.login"))
     try:
         endpoint = api_endpoint()
     except ZabbixError:
         endpoint = None
-    return render_template("dashboard.html", zabbix_endpoint=endpoint)
+    return render_template("dashboard.html", zabbix_endpoint=endpoint, active_view=view)
 
 
 @bp.get("/api/session")

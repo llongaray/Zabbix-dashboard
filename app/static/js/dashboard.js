@@ -41,7 +41,6 @@ function requestRefresh() {
 }
 
 async function initialize() {
-  initializeNavigation();
   initializeCapacity();
   initializeReports();
   initializeSmtp();
@@ -51,6 +50,7 @@ async function initialize() {
     onWatch: hostid => stream?.watchHost(hostid),
   });
   initializeSettings({refresh: requestRefresh});
+  initializeNavigation();
 
   const config = await loadConfiguration();
   stream = connectStream({

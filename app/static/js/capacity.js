@@ -1,5 +1,5 @@
 import {requestJSON} from './api.js';
-import {$, setMessage, setText} from './state.js';
+import {$, setMessage, setText, onView} from './state.js';
 
 const format = new Intl.NumberFormat('pt-BR', {maximumFractionDigits: 1});
 const gib = value => value == null ? '—' : format.format(value) + ' GiB';
@@ -74,5 +74,5 @@ export function initializeCapacity() {
     }
   }
   refresh.addEventListener('click', load);
-  $('[data-view="capacity"]').addEventListener('click', () => { if (!loaded) void load(); });
+  onView('capacity', () => { if (!loaded) void load(); });
 }

@@ -1,5 +1,5 @@
 import {postJSON, requestJSON} from './api.js';
-import {$, setMessage, setText, showView} from './state.js';
+import {$, setMessage, setText, showView, onView} from './state.js';
 
 function options(select, rows, placeholder, value = '') {
   select.replaceChildren(new Option(placeholder, ''),
@@ -185,7 +185,7 @@ export function initializeSmtp() {
   });
 
   loadSenders().then(() => loadRouting()).catch(error => setMessage('#smtp-status', error.message, true));
-  $('[data-view="settings"]').addEventListener('click', () => {
+  onView('settings', () => {
     if (routing.delivery) loadRouting().catch(error => setMessage('#alert-group-status', error.message, true));
   });
 }

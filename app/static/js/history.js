@@ -1,7 +1,7 @@
 /** História por host: primeiro cache persistido, depois Zabbix oficial. */
 import {requestJSON} from './api.js';
 import {getSelectedHostId} from './hosts.js';
-import {$, setMessage, showView} from './state.js';
+import {$, setMessage, showView, onView} from './state.js';
 import {clearHistoryCharts, renderLocal, renderMetric} from './history_charts.js';
 
 const metrics = ['cpu', 'memory', 'disk', 'network'];
@@ -36,8 +36,8 @@ export function updateHistoryHosts(hosts) {
       $('#history-badge-' + metric).textContent = 'Aguardando';
       setMessage('#history-message-' + metric, '');
     }
-    if ($('#view-history').classList.contains('active')) void loadHistory();
   }
+  if (previous !== select.value && $('#view-history').classList.contains('active')) void loadHistory();
 }
 
 function markLoading() {
@@ -114,12 +114,10 @@ export function initializeHistory() {
   $('#history-host').addEventListener('change', () => void loadHistory({force: true}));
   $('#refresh-history').addEventListener('click',
     () => void loadHistory({force: true}));
-  document.querySelector('[data-view="history"]')
-    ?.addEventListener('click', () => void loadHistory());
+  onView('history', () => void loadHistory());
 }
 
 export function openHistory(item) {
-  showView('history');
   const selected = String(getSelectedHostId() || '');
   if (selected && knownHosts.some(host => String(host.hostid) === selected)) {
     $('#history-host').value = selected;
@@ -127,5 +125,5 @@ export function openHistory(item) {
   // Ao clicar em "Histórico" dentro de um item, mostra todos os quesitos.
   if (item) setMessage('#chart-status', 'Carregando métricas de ' +
     (item.name || 'servidor') + ' e demais recursos do host...');
-  void loadHistory({force: true});
+  showView('history');
 }
