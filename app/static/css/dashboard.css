@@ -10,10 +10,16 @@
 .nav a:hover{background:var(--siga-color-primary-subtle);color:var(--siga-color-on-primary-subtle)}
 .sidefoot{margin-top:auto;color:var(--siga-color-text-secondary);font-size:12px;padding:16px 22px;border-top:1px solid var(--siga-color-border)}
 .workspace{min-width:0;display:flex;flex-direction:column}
-.topbar{min-height:76px;border-bottom:1px solid var(--siga-color-border);background:var(--siga-color-surface);display:flex;align-items:center;justify-content:space-between;padding:14px 34px;gap:14px}
+.topbar{min-height:76px;border-bottom:1px solid var(--siga-color-border);background:var(--siga-color-surface);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:14px 34px;gap:14px}
 .topbar h1{font-size:19px;margin:0}
 .topbar p{font-size:12px;color:var(--siga-color-text-secondary);margin:4px 0 0}
-.top-actions{display:flex;gap:10px;align-items:center}
+.top-actions{display:flex;flex:0 0 auto;max-width:100%;gap:10px;align-items:center;margin-inline-start:auto;white-space:nowrap}
+.top-actions form,.top-actions button{flex:none}
+.top-actions #connection{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:420px){
+  .top-actions{gap:6px}
+  .top-actions .siga-button{padding-inline:8px}
+}
 .content{padding:30px 34px;flex:1;max-width:1600px;width:100%;margin:auto}
 .view{display:none}
 .view.active{display:block}
@@ -226,7 +232,6 @@ html,body{width:100%;max-width:100%;overflow-x:clip}
 .icon{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .metric .icon{box-sizing:content-box;padding:9px;border-radius:50%;background:var(--siga-color-primary-subtle);color:var(--siga-color-on-primary-subtle)}
 .metric .label{display:flex;align-items:center;gap:10px}
-.top-actions{flex-wrap:wrap}
 .topbar{position:sticky;top:0;z-index:var(--siga-z-sticky)}
 
 @media(max-width:700px){
@@ -238,7 +243,6 @@ html,body{width:100%;max-width:100%;overflow-x:clip}
   .grid,.config-kpis,.gauge-grid{grid-template-columns:minmax(0,1fr)}
 }
 
-.top-actions{flex-wrap:wrap}
 .monitor-charts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
 .monitor-charts .card{min-width:0}
 .monitor-charts h3,.report-panel h3{margin:0 0 16px}
