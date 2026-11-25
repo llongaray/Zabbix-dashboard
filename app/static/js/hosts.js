@@ -3,7 +3,7 @@
  * Seleção filtrável para dezenas de hosts; sem reflows horizontais.
  * Não classificamos itens Zabbix por prefixo aqui: o backend valida a semântica.
  */
-import {requestJSON} from './api.js';
+import {appPath, requestJSON} from './api.js';
 import {$, $$, createButton, setMessage, setText} from './state.js';
 
 let currentHosts = [];
@@ -105,7 +105,7 @@ function metricIcon(name) {
   const use = document.createElementNS(namespace, 'use');
   svg.setAttribute('class', 'icon');
   svg.setAttribute('aria-hidden', 'true');
-  use.setAttribute('href', '/static/monitor-icons.svg#' + name);
+  use.setAttribute('href', appPath('/static/monitor-icons.svg') + '#' + name);
   svg.append(use);
   return svg;
 }

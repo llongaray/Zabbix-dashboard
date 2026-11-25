@@ -1,4 +1,4 @@
-import {requestJSON} from './api.js';
+import {appPath, requestJSON} from './api.js';
 import {$, $$, setMessage, onView} from './state.js';
 import {bars, dayBuckets} from './monitor_charts.js';
 
@@ -65,7 +65,7 @@ export function initializeReports() {
         (data.truncated ? ' · Resultado parcial limitado a 5.000 incidentes' : ''));
     }).finally(() => { button.disabled = false; });
   });
-  $('#incidents-csv').addEventListener('click', () => { window.location.assign(incidentUrl() + '&format=csv'); });
+  $('#incidents-csv').addEventListener('click', () => { window.location.assign(appPath(incidentUrl()) + '&format=csv'); });
   const sla = $('#report-sla');
   $('#load-slas').addEventListener('click', () => load('#sla-status', async () => {
     const data = await requestJSON('/api/reports/slas');

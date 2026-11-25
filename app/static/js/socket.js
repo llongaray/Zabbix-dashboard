@@ -1,5 +1,5 @@
 /** Cliente Socket.IO autenticado: fallback HTTP quando transporte não disponível. */
-import {requestJSON} from './api.js';
+import {appPath, requestJSON} from './api.js';
 import {showWebSocketStatus} from './settings.js';
 
 export function connectStream(handlers) {
@@ -32,6 +32,7 @@ export function connectStream(handlers) {
 
   if (typeof window.io !== 'undefined') {
     socket = window.io({
+      path: appPath('/socket.io/'),
       transports: ['websocket', 'polling'],
       tryAllTransports: true,
       reconnection: true,

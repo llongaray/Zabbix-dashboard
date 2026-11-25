@@ -9,7 +9,7 @@ from hmac import compare_digest
 from urllib.parse import urlencode
 from uuid import uuid4
 
-from flask import flash, jsonify, redirect, request, session
+from flask import flash, jsonify, redirect, request, session, url_for
 
 from app import db
 from app.routes import bp
@@ -196,15 +196,15 @@ def smtp_callback():
     if (not pending or pending["expires"] < time.time() or not state.isascii()
             or not compare_digest(pending["state"], state)):
         flash("A autorização SMTP expirou ou é inválida.", "smtp-error")
-        return redirect("/configuracoes#smtp")
+        return redirect(url_for("dashboard.home", view="settings", _anchor="smtp"))
     session.pop("smtp_oauth")
     code = request.args.get("code")
     if not code:
         flash("A autorização Microsoft não foi concluída.", "smtp-error")
-        return redirect("/configuracoes#smtp")
+        return redirect(url_for("dashboard.home", view="settings", _anchor="smtp"))
     provider, email = pending["provider"], pending["email"]
     if provider != "microsoft":
-        return redirect("/configuracoes#smtp")
+        return redirect(url_for("dashboard.home", view="settings", _anchor="smtp"))
     try:
         tokens = mailing.exchange_token(provider, grant_type="authorization_code", code=code,
                                         redirect_uri=mailing.oauth_settings()[2],
@@ -220,4 +220,4 @@ def smtp_callback():
         flash(smtp_error(exc), "smtp-error")
     else:
         flash("Conta de e-mail conectada.", "smtp-ok")
-    return redirect("/configuracoes#smtp")
+    return redirect(url_for("dashboard.home", view="settings", _anchor="smtp"))

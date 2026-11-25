@@ -8,10 +8,14 @@ export class ApiError extends Error {
   }
 }
 
+export function appPath(path) {
+  return (document.querySelector('meta[name="app-prefix"]')?.content || '') + path;
+}
+
 export async function requestJSON(path, options = {}) {
   let response;
   try {
-    response = await fetch(path, {credentials: 'same-origin', cache: 'no-store', ...options});
+    response = await fetch(appPath(path), {credentials: 'same-origin', cache: 'no-store', ...options});
   } catch (error) {
     throw new ApiError('Não foi possível acessar o backend Flask.', 0, 'NETWORK');
   }

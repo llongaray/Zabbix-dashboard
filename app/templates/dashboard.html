@@ -15,6 +15,7 @@
 {%- endmacro %}
 <html lang="pt-BR">
 <head>
+  <meta name="app-prefix" content="{{ request.script_root }}">
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -48,7 +49,7 @@
       <div><h1>Central de Monitoramento</h1><p>Recursos, inventário e status dos servidores</p></div>
       <div class="top-actions"><span class="siga-badge siga-badge--primary" id="connection" aria-live="polite">● Aguardando token</span>
         <button class="siga-button siga-button--secondary" id="theme-toggle" type="button" aria-pressed="false">Tema escuro</button>
-        <form action="/logout" method="post"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button class="siga-button siga-button--secondary">Sair</button></form>
+        <form action="{{ url_for('dashboard.logout') }}" method="post"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button class="siga-button siga-button--secondary">Sair</button></form>
       </div>
     </header>
     <main class="content">

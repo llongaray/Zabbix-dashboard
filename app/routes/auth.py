@@ -62,7 +62,7 @@ def logout():
         return jsonify(error="Origem não autorizada."), 403
     revoke_session(session.get("login_id"))
     session.clear()
-    return redirect("/login")
+    return redirect(url_for("dashboard.login"))
 
 
 @bp.get("/", defaults={"view": "overview"})
