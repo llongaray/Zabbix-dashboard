@@ -32,7 +32,7 @@
 <body>
 <div class="shell">
   <aside class="sidebar" aria-label="Navegação principal">
-    <div class="brand"><span class="brand-icon">◈</span><span>Zabbix Dashboard<small>Monitoramento Zabbix</small></span></div>
+    <div class="brand"><img src="{{ url_for('static', filename='zla-sidebar.png') }}" alt="ZLA — Zabbix Dashboard Avansat"></div>
     <p class="nav-label">Navegação</p>
     <nav class="nav">
       <a href="{{ url_for('dashboard.home', view='overview') }}" data-view="overview" {% if active_view == 'overview' %}class="active" aria-current="page"{% endif %}> {{ icon("overview") }} Visão geral</a>
@@ -46,7 +46,10 @@
   </aside>
   <div class="workspace">
     <header class="topbar">
-      <div><h1>Central de Monitoramento</h1><p>Recursos, inventário e status dos servidores</p></div>
+      <div class="topbar-identity">
+        <img src="{{ url_for('static', filename='zla-color.png') }}" alt="ZLA — Zabbix Dashboard Avansat">
+        <div><h1>Central de Monitoramento</h1><p>Recursos, inventário e status dos servidores</p></div>
+      </div>
       <div class="top-actions"><span class="siga-badge siga-badge--primary" id="connection" aria-live="polite">● Aguardando token</span>
         <button class="siga-button siga-button--secondary" id="theme-toggle" type="button" aria-pressed="false">Tema escuro</button>
         <form action="{{ url_for('dashboard.logout') }}" method="post"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button class="siga-button siga-button--secondary">Sair</button></form>

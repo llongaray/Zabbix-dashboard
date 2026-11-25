@@ -20,7 +20,7 @@ body {
   background: linear-gradient(140deg, var(--siga-purple-950), var(--siga-neutral-900));
   color: var(--siga-neutral-0);
 }
-.intro .brand { color: var(--siga-purple-200); font-weight: 700; }
+.login-brand { display: block; width: min(100%, 33rem); height: auto; margin-bottom: 1rem; }
 .intro h1 {
   margin: 0;
   font-size: clamp(2rem, 4vw, 4rem);
