@@ -30,11 +30,24 @@ def items(host_id):
     data = cache.get("host:" + host_id)
     if not data:
         data = {"hostid": host_id, "items": [], "gauges": {},
+                "storage": {"volumes": [], "physical_disks": [], "totals": {}},
                 "pending": True,
                 "message": "Aguardando a primeira coleta do worker para este host."}
     if request.args.get("include_gauges") == "1":
         return jsonify(data)
     return jsonify(data["items"])
+
+
+@bp.get("/api/hosts/<host_id>/storage")
+@protected
+def host_storage(host_id):
+    """Retorna volumes, discos físicos e top pastas/apps do cache PostgreSQL."""
+    if not host_id.isdigit():
+        raise ValueError("ID de host inválido.")
+    data = cache.get("host:" + host_id) or {}
+    return jsonify(data.get("storage") or {
+        "volumes": [], "physical_disks": [], "totals": {},
+    })
 
 
 @bp.get("/api/hosts/<host_id>/gauges")

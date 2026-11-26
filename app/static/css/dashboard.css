@@ -281,3 +281,41 @@ html,body{width:100%;max-width:100%;overflow-x:clip}
 .gauge-percentage .progress-ring,.gauge-percentage .value{grid-row:2;align-self:start}
 .gauge-percentage .gauge-trend{grid-row:3}
 .gauge-percentage .gauge-detail{grid-row:4;align-self:start}
+
+/* Detalhamento multi-disco: discos físicos (SSD/HDD/NVMe), volumes e top pastas/programas. */
+.storage-detail{margin:16px 0 0;padding-top:16px;border-top:1px solid var(--siga-color-border)}
+.storage-detail[hidden],.storage-physical[hidden]{display:none}
+.storage-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.storage-header h4{display:flex;align-items:center;gap:8px;margin:0;font-size:15px}
+.storage-header h4 .icon{width:17px;height:17px;color:var(--siga-color-primary)}
+.storage-summary{font-size:12px}
+.storage-physical{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.storage-disk-chip{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;padding:7px 11px;border:1px solid var(--siga-color-border);border-radius:var(--siga-radius-md);background:var(--siga-color-surface-subtle);font-size:12px}
+.storage-media-badge{display:inline-block;padding:2px 7px;border-radius:var(--siga-radius-full);font-size:11px;font-weight:700;background:var(--siga-color-primary-subtle);color:var(--siga-color-on-primary-subtle)}
+.storage-media-badge[data-media="SSD"],.storage-media-badge[data-media="NVMe"]{background:var(--siga-color-success-subtle);color:var(--siga-color-success)}
+.storage-media-badge[data-media="HDD"]{background:var(--siga-color-info-subtle, var(--siga-color-primary-subtle));color:var(--siga-color-info, var(--siga-color-primary))}
+.storage-volumes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:12px}
+.storage-volume{display:flex;flex-direction:column;gap:10px;padding:14px;border:1px solid var(--siga-color-border);border-radius:var(--siga-radius-md);background:var(--siga-color-surface-subtle)}
+.storage-volume-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.storage-volume-title{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:700;font-size:14px}
+.storage-volume-meta{font-size:11px;color:var(--siga-color-text-secondary)}
+.storage-volume-pct{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.storage-bar{height:8px;border-radius:99px;background:var(--siga-color-border);overflow:hidden}
+.storage-bar i{display:block;height:100%;border-radius:inherit;background:var(--siga-color-primary)}
+.storage-bar i[data-tone="warning"]{background:var(--siga-color-warning)}
+.storage-bar i[data-tone="danger"]{background:var(--siga-color-danger)}
+.storage-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;font-size:12px}
+.storage-metrics div{display:grid;gap:2px}
+.storage-metrics span{font-size:11px;color:var(--siga-color-text-secondary)}
+.storage-metrics strong{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.storage-top{border-top:1px solid var(--siga-color-border);padding-top:8px;font-size:12px}
+.storage-top summary{cursor:pointer;font-weight:600;color:var(--siga-color-text-secondary)}
+.storage-top summary:hover{color:var(--siga-color-primary)}
+.storage-top-body{display:grid;gap:10px;margin-top:8px}
+.storage-top-title{margin:0 0 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--siga-color-text-secondary)}
+.storage-top-list{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+.storage-top-list li{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:12px}
+.storage-top-list span{min-width:0;overflow-wrap:anywhere}
+.storage-top-list strong{flex:none;font-variant-numeric:tabular-nums;white-space:nowrap}
+.storage-empty{margin:0;font-size:12px}
+#view-servers .storage-detail{margin-bottom:16px}

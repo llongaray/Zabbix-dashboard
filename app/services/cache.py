@@ -9,7 +9,7 @@ import time
 from sqlalchemy import text
 
 from app import db
-from app.services import host_specs
+from app.services import host_specs, storage
 
 SCHEMA = (
     """CREATE TABLE IF NOT EXISTS monitor_cache (
@@ -50,6 +50,9 @@ def get(key):
     result = dict(row[0])
     if key.startswith("host:") and not result.get("specs"):
         result["specs"] = host_specs.specifications(result.get("items", []), None)
+    # Preenche inventário de múltiplos discos sob demanda para caches antigos no PostgreSQL.
+    if key.startswith("host:") and not result.get("storage"):
+        result["storage"] = storage.extract_storage(result.get("items", []))
     result["cached_at"] = int(row[1])
     return result
 
@@ -82,11 +85,12 @@ def save(key, payload):
     return stamp
 
 
-def save_host(host_id, items, gauges, diagnostics=None, *, specs=None):
-    """Salva inventário e amostras recentes em uma única transação."""
+def save_host(host_id, items, gauges, diagnostics=None, *, specs=None, storage_data=None):
+    """Salva inventário, múltiplos discos/volumes e amostras recentes em uma única transação."""
     stamp = int(time.time())
     payload = {"hostid": str(host_id), "items": items, "gauges": gauges,
-               "diagnostics": diagnostics or {}, "specs": specs or {}}
+               "diagnostics": diagnostics or {}, "specs": specs or {},
+               "storage": storage_data or {}}
     with db.Session.begin() as session:
         session.execute(text(
             "INSERT INTO monitor_cache(cache_key, payload, updated_at) "

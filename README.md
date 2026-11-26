@@ -109,7 +109,9 @@ O endereço do endpoint é somente leitura na interface, pois pertence à config
 - **Sistema operacional e arquitetura** vêm dos itens do agente, com fallback para o inventário do host. Windows e Linux têm ícones próprios.
 - **CPUs lógicas** vêm de `system.cpu.num` no Linux e de `Win32_ComputerSystem.NumberOfLogicalProcessors` via WMI no Windows.
 - **Modelo da CPU** é exibido quando o Zabbix coleta `system.hw.cpu[0,model]` no Linux ou `wmi.get[root/cimv2,"Select Name from Win32_Processor"]` no Windows.
-- **RAM total** vem de `vm.memory.size[total]`. A capacidade do disco corresponde ao volume usado pelo indicador de ocupação. Os valores são exibidos em GiB.
+- **RAM total** vem de `vm.memory.size[total]`.
+- **Múltiplos discos e volumes (HDD/SSD/NVMe):** além do volume principal nos indicadores circulares, o detalhamento de cada servidor exibe **todos os volumes montados** (`C:`, `D:`, `E:`, `/`, `/var`, etc.) com espaço **total, ocupado, livre e percentual** a partir de `vfs.fs.get`, `vfs.fs.dependent.size[...]` e `vfs.fs.size[...]`. Quando o Zabbix coleta `smart.disk.get`, `wmi.getall` (`MSFT_PhysicalDisk` / `Win32_DiskDrive`) ou `vfs.dev.discovery`, também identifica os discos físicos (`HDD`, `SSD`, `NVMe`), modelo, barramento e saúde.
+- **Pastas e programas com maior uso por disco:** ao abrir o detalhamento do host, cada volume possui uma seção expansível alimentada por itens `custom.disk.top_usage` (via `UserParameter` no Agent 2) ou itens nativos `vfs.dir.size[...]`. Consulte [docs/zabbix-agent2-storage.md](docs/zabbix-agent2-storage.md) e os scripts prontos em `deploy/zabbix-agent2/`.
 - **Online** e **Sem resposta ao ping** dependem de uma leitura recente de `icmpping`. Quando o ping não está disponível, o status indica a atualidade das métricas coletadas. **Desabilitado** corresponde ao estado de configuração do host no Zabbix.
 
 ## Planejamento de capacidade de RAM
@@ -149,7 +151,8 @@ Zabbix-dashboard/
 │   │   ├── monitoring.py     # KPIs, métricas e diagnósticos
 │   │   ├── cache.py          # Snapshots e mini-histórico PostgreSQL
 │   │   ├── history_series.py # Históricos e normalização das séries
-│   │   ├── host_specs.py     # Especificações, volume e status dos hosts
+│   │   ├── host_specs.py     # Especificações, resumo multi-volume e status dos hosts
+│   │   ├── storage.py        # Todos os volumes, HDD/SSD/NVMe e top pastas/programas
 │   │   ├── capacity.py      # Picos de memória e estimativas de remanejamento
 │   │   ├── alerts.py        # Roteamento e registro de tentativas de envio
 │   │   └── mailing.py       # Envio SMTP por STARTTLS
@@ -232,7 +235,8 @@ Com login ativo, endpoints de diagnóstico do Flask:
 
 Novos endpoints de leitura local e histórico:
 - `GET /api/collector/status` — diagnóstico do coletor independente.
-- `GET /api/hosts/<host_id>/items?include_gauges=1` — itens e métricas já coletados.
+- `GET /api/hosts/<host_id>/items?include_gauges=1` — itens, métricas e armazenamento multi-disco (`storage`) já coletados.
+- `GET /api/hosts/<host_id>/storage` — volumes montados, discos físicos (`HDD`/`SSD`/`NVMe`) e top pastas/programas em cache.
 - `GET /api/history/local/<host_id>` — prévia do PostgreSQL, sem espera pela API.
 - `GET /api/history/series/<host_id>/<cpu|memory|disk|gpu|network>?days=30` — série oficial por recurso.
 - `GET /api/capacity` — picos de memória, cobertura e sugestões de remanejamento.

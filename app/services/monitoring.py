@@ -125,7 +125,11 @@ def _kind(item):
 
 
 def _score(item, kind, clock):
-    """Prefere amostras recentes e o volume raiz/C: em discos."""
+    """Prefere amostras recentes e o volume raiz/C: no gauge resumido de disco.
+
+    Todos os demais volumes (`D:`, `E:`, `/var`, etc.) são preservados em
+    `storage.extract_storage()` para detalhamento completo por unidade.
+    """
     key = str(item.get("key_", "")).lower()
     score = clock / 100_000_000
     if kind == "disk" and any(part in key for part in ("[c:", '[/,', '["c:', '[\"c:')):

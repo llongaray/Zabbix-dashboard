@@ -13,6 +13,16 @@
             <div><dt>{{ icon("document") }} Memória RAM total</dt><dd data-spec="ram-total"></dd></div>
           </dl>
 {%- endmacro %}
+{% macro host_storage() -%}
+<section class="storage-detail" data-host-storage hidden aria-label="Discos e volumes do servidor">
+  <div class="storage-header">
+    <h4>{{ icon("overview") }} Armazenamento: discos e volumes</h4>
+    <span class="muted storage-summary" data-storage-summary></span>
+  </div>
+  <div class="storage-physical" data-storage-physical hidden></div>
+  <div class="storage-volumes" data-storage-volumes></div>
+</section>
+{%- endmacro %}
 <html lang="pt-BR">
 <head>
   <meta name="app-prefix" content="{{ request.script_root }}">
@@ -96,6 +106,7 @@
             <button class="siga-button siga-button--secondary" data-go="servers">Ver itens e detalhes {{ icon("arrow-right") }}</button>
           </div>
           <div id="overview-gauges" class="gauge-grid"></div>
+          {{ host_storage() }}
         </article>
         <article class="card sectiongap"><h3>Problemas ativos reportados pelo Zabbix</h3>
           <div class="tablewrap"><table><thead><tr><th>Problema</th><th>Severidade</th><th>Ocorrência</th></tr></thead><tbody id="problems-body"></tbody></table></div>
@@ -106,6 +117,7 @@
         <div class="card"><div class="host-tools"><input class="siga-input" id="server-host-search" type="search" placeholder="Buscar servidor" aria-label="Buscar servidores da aba Servidores"><span id="server-host-count" class="host-count">0 hosts</span></div><div class="host-rail"><button type="button" class="host-arrow" data-scroll-target="server-tabs" data-scroll-dir="-1" aria-label="Servidores anteriores">‹</button><div class="tabs" id="server-tabs"></div><button type="button" class="host-arrow" data-scroll-target="server-tabs" data-scroll-dir="1" aria-label="Próximos servidores">›</button></div><h3 id="selected-host">Selecione um host</h3>
           {{ host_specifications() }}
           <div class="gauge-grid" id="server-gauges"></div><div id="server-coverage" class="coverage-list" aria-live="polite"></div>
+          {{ host_storage() }}
           <div class="host-tools"><input class="siga-input" id="item-search" type="search" placeholder="Filtrar itens por nome ou chave" aria-label="Filtrar itens do servidor"><span class="host-count">Tabela de itens</span></div>
           <div class="tablewrap"><table><thead><tr><th>Item monitorado</th><th>Valor atual</th><th>Histórico</th></tr></thead><tbody id="items"></tbody></table></div>
           <p class="status" id="server-status"></p></div>

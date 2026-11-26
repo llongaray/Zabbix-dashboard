@@ -117,6 +117,19 @@ function cardLine(icon, text) {
   return line;
 }
 
+function formatBytes(bytes) {
+  const value = Number(bytes);
+  if (!Number.isFinite(value) || value < 0) return 'N/D';
+  const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB'];
+  let unit = 0;
+  let scaled = value;
+  while (scaled >= 1024 && unit < units.length - 1) {
+    scaled /= 1024;
+    unit++;
+  }
+  return (unit === 0 ? Math.round(scaled) : capacityFormat.format(scaled)) + ' ' + units[unit];
+}
+
 function hostCard(host) {
   const button = createButton('', () => selectHost(host), 'host-card');
   button.setAttribute('aria-controls', 'overview-host-detail');
@@ -128,8 +141,12 @@ function hostCard(host) {
   const cpu = specs.cpu_model || (specs.logical_cpus ? specs.logical_cpus + ' CPUs lógicas' : 'Modelo de CPU não coletado');
   const formatCapacity = bytes => capacityFormat.format(bytes / 1024 ** 3) + ' GiB';
   const ram = specs.ram_bytes ? formatCapacity(specs.ram_bytes) + ' RAM' : 'RAM não coletada';
-  const disk = summary.disk_bytes ?
-    formatCapacity(summary.disk_bytes) + ' · Volume ' + summary.disk_volume : 'Disco total não coletado';
+  let disk = 'Disco total não coletado';
+  if (summary.disks_count > 1 && summary.disks_total_bytes) {
+    disk = formatBytes(summary.disks_total_bytes) + ' · ' + summary.disks_count + ' volumes';
+  } else if (summary.disk_bytes) {
+    disk = formatCapacity(summary.disk_bytes) + ' · Volume ' + summary.disk_volume;
+  }
   const health = host.status === '1' ? 'disabled' : summary.status || 'pending';
   const status = document.createElement('span');
   status.className = 'host-card-status';
@@ -205,6 +222,7 @@ function renderHostButtons() {
 async function selectHost(host) {
   selectedHost = host;
   $$('[data-host-specs]').forEach(panel => { panel.hidden = true; });
+  $$('[data-host-storage]').forEach(panel => { panel.hidden = true; });
   renderHostButtons();
   $('#overview-gauges').replaceChildren();
   $('#server-gauges').replaceChildren();
@@ -260,6 +278,7 @@ export function renderSnapshot(snapshot) {
     $('#overview-gauges').replaceChildren();
     $('#server-gauges').replaceChildren();
     $$('[data-host-specs]').forEach(panel => { panel.hidden = true; });
+    $$('[data-host-storage]').forEach(panel => { panel.hidden = true; });
   }
   renderProblems(snapshot.problems || []);
 }
@@ -409,12 +428,178 @@ function renderSpecifications(specs) {
   }
 }
 
+function renderTopUsageGroup(title, entries, totalBytes) {
+  const wrapper = document.createElement('div');
+  const heading = document.createElement('p');
+  heading.className = 'storage-top-title';
+  heading.textContent = title;
+  const list = document.createElement('ul');
+  list.className = 'storage-top-list';
+  for (const entry of entries) {
+    const item = document.createElement('li');
+    const label = document.createElement('span');
+    label.textContent = entry.path && entry.path !== entry.name ?
+      entry.name + ' (' + entry.path + ')' : (entry.name || entry.path);
+    label.title = entry.path || entry.name || '';
+    const size = document.createElement('strong');
+    const share = totalBytes ? ' (' + capacityFormat.format(entry.bytes * 100 / totalBytes) + '%)' : '';
+    size.textContent = formatBytes(entry.bytes) + share;
+    item.append(label, size);
+    list.append(item);
+  }
+  wrapper.append(heading, list);
+  return wrapper;
+}
+
+function renderStorage(storageData) {
+  const volumes = Array.isArray(storageData?.volumes) ? storageData.volumes : [];
+  const physical = Array.isArray(storageData?.physical_disks) ? storageData.physical_disks : [];
+  const totals = storageData?.totals || {};
+
+  for (const panel of $$('[data-host-storage]')) {
+    const summaryEl = panel.querySelector('[data-storage-summary]');
+    const physicalEl = panel.querySelector('[data-storage-physical]');
+    const volumesEl = panel.querySelector('[data-storage-volumes]');
+    if (!volumes.length && !physical.length) {
+      panel.hidden = true;
+      continue;
+    }
+
+    const summaryParts = [];
+    if (volumes.length) summaryParts.push(volumes.length + (volumes.length === 1 ? ' volume' : ' volumes'));
+    if (physical.length) summaryParts.push(physical.length + (physical.length === 1 ? ' disco físico' : ' discos físicos'));
+    if (totals.total_bytes) summaryParts.push(formatBytes(totals.total_bytes) + ' total');
+    if (totals.free_bytes != null) summaryParts.push(formatBytes(totals.free_bytes) + ' livre');
+    summaryEl.textContent = summaryParts.join(' · ');
+
+    if (physical.length) {
+      const chipFragment = document.createDocumentFragment();
+      for (const disk of physical) {
+        const chip = document.createElement('div');
+        chip.className = 'storage-disk-chip';
+        const badge = document.createElement('span');
+        badge.className = 'storage-media-badge';
+        badge.dataset.media = disk.media_type || 'Desconhecido';
+        badge.textContent = disk.media_type || 'Disco';
+        const info = [disk.name || disk.model || disk.id];
+        if (disk.size_bytes) info.push(formatBytes(disk.size_bytes));
+        if (disk.bus_type) info.push(disk.bus_type);
+        if (disk.health) info.push(disk.health);
+        if (Number.isFinite(disk.temperature_c)) info.push(disk.temperature_c + ' °C');
+        const text = document.createElement('span');
+        text.textContent = info.join(' · ');
+        chip.append(badge, text);
+        chipFragment.append(chip);
+      }
+      physicalEl.replaceChildren(chipFragment);
+      physicalEl.hidden = false;
+    } else {
+      physicalEl.replaceChildren();
+      physicalEl.hidden = true;
+    }
+
+    const volFragment = document.createDocumentFragment();
+    for (const vol of volumes) {
+      const card = document.createElement('article');
+      card.className = 'storage-volume';
+
+      const head = document.createElement('div');
+      head.className = 'storage-volume-head';
+      const titleBox = document.createElement('div');
+      const title = document.createElement('div');
+      title.className = 'storage-volume-title';
+      title.textContent = vol.volume + (vol.label ? ' (' + vol.label + ')' : '');
+      const meta = document.createElement('div');
+      meta.className = 'storage-volume-meta';
+      const metaParts = [];
+      if (vol.fstype) metaParts.push(vol.fstype);
+      if (vol.drivetype) metaParts.push(vol.drivetype);
+      if (vol.stale) metaParts.push('leitura desatualizada');
+      meta.textContent = metaParts.join(' · ') || 'Volume monitorado';
+      titleBox.append(title, meta);
+
+      const pct = Number(vol.used_pct);
+      const hasPct = Number.isFinite(pct) && pct >= 0 && pct <= 100;
+      const pctLabel = document.createElement('span');
+      pctLabel.className = 'storage-volume-pct';
+      pctLabel.textContent = hasPct ? pct.toFixed(1) + '%' : 'N/D';
+      head.append(titleBox, pctLabel);
+
+      const bar = document.createElement('div');
+      bar.className = 'storage-bar';
+      bar.setAttribute('aria-hidden', 'true');
+      const fill = document.createElement('i');
+      if (hasPct) {
+        fill.style.width = pct + '%';
+        if (pct >= 90) fill.dataset.tone = 'danger';
+        else if (pct >= 80) fill.dataset.tone = 'warning';
+      } else {
+        fill.style.width = '0%';
+      }
+      bar.append(fill);
+
+      const metrics = document.createElement('div');
+      metrics.className = 'storage-metrics';
+      const freePct = Number.isFinite(Number(vol.free_pct)) ?
+        ' (' + Number(vol.free_pct).toFixed(1) + '%)' : '';
+      for (const [label, value] of [
+        ['Total', vol.total_bytes != null ? formatBytes(vol.total_bytes) : 'N/D'],
+        ['Ocupado', vol.used_bytes != null ? formatBytes(vol.used_bytes) : 'N/D'],
+        ['Livre', (vol.free_bytes != null ? formatBytes(vol.free_bytes) : 'N/D') + freePct],
+      ]) {
+        const cell = document.createElement('div');
+        const cap = document.createElement('span');
+        cap.textContent = label;
+        const val = document.createElement('strong');
+        val.textContent = value;
+        cell.append(cap, val);
+        metrics.append(cell);
+      }
+
+      const details = document.createElement('details');
+      details.className = 'storage-top';
+      const summary = document.createElement('summary');
+      const topDirs = Array.isArray(vol.top_dirs) ? vol.top_dirs : [];
+      const topApps = Array.isArray(vol.top_apps) ? vol.top_apps : [];
+      summary.textContent = (topDirs.length || topApps.length) ?
+        'Pastas e programas com maior uso (' + (topDirs.length + topApps.length) + ')' :
+        'Pastas e programas com maior uso (não coletado)';
+      const body = document.createElement('div');
+      body.className = 'storage-top-body';
+      if (topDirs.length) body.append(renderTopUsageGroup('Pastas mais pesadas', topDirs, vol.total_bytes));
+      if (topApps.length) body.append(renderTopUsageGroup('Programas / aplicativos', topApps, vol.total_bytes));
+      if (!topDirs.length && !topApps.length) {
+        const hint = document.createElement('p');
+        hint.className = 'muted storage-empty';
+        hint.textContent = 'Sem item custom.disk.top_usage ou vfs.dir.size[*] habilitado no Zabbix Agent 2 para este volume.';
+        body.append(hint);
+      }
+      details.append(summary, body);
+
+      card.append(head, bar, metrics, details);
+      volFragment.append(card);
+    }
+
+    if (!volumes.length) {
+      const hint = document.createElement('p');
+      hint.className = 'muted storage-empty';
+      hint.textContent = 'Nenhum volume lógico retornado por vfs.fs.get ou vfs.fs.size neste host.';
+      volFragment.append(hint);
+    }
+    volumesEl.replaceChildren(volFragment);
+    panel.hidden = false;
+  }
+}
+
 export function renderItems(payload) {
   if (!selectedHost || String(payload?.hostid) !== String(selectedHost.hostid)) {
     return;
   }
   currentItems = payload.items || [];
-  if (!payload.pending) renderSpecifications(payload.specs || {});
+  if (!payload.pending) {
+    renderSpecifications(payload.specs || {});
+    renderStorage(payload.storage || {});
+  }
   setText('#overview-summary', hostLabel(selectedHost) + ' · ' +
     currentItems.length + ' itens disponíveis');
   // Não inferir métricas de rede no frontend; apenas dados validados pelo backend.

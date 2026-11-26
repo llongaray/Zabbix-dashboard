@@ -10,7 +10,7 @@ import time
 from datetime import datetime, timezone
 
 from app.db import init_database
-from app.services import alerts, cache, host_specs, monitoring, zabbix
+from app.services import alerts, cache, host_specs, monitoring, storage, zabbix
 
 LOG = logging.getLogger("zabbix.collector")
 
@@ -36,7 +36,11 @@ def cycle(cursor=0, tick=0):
                 gauges = monitoring.gauge_metrics(host_items)
                 diagnostics = monitoring.coverage_report(host_items, gauges)
                 specs = host_specs.specifications(host_items, inventories[host_id])
-                cache.save_host(host_id, host_items, gauges, diagnostics, specs=specs)
+                storage_data = storage.extract_storage(host_items)
+                cache.save_host(
+                    host_id, host_items, gauges, diagnostics,
+                    specs=specs, storage_data=storage_data,
+                )
         except zabbix.ZabbixError as exc:
             LOG.warning("Falha na coleta de itens (lote de hosts): %s", exc)
 

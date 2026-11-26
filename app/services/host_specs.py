@@ -2,6 +2,8 @@
 import json
 import re
 
+from app.services import storage
+
 
 def overview_summary(record, now):
     items = record.get("items", [])
@@ -20,6 +22,17 @@ def overview_summary(record, now):
             clock = str(total_item.get("lastclock", ""))
             if reading.isdecimal() and int(reading) > 0 and clock.isdecimal() and int(clock) > 0:
                 total = int(reading)
+
+    # Consolida todos os volumes descobertos para exibir soma total no card de resumo
+    # sem perder a referência individual (`disk_bytes` / `disk_volume`) do volume raiz.
+    storage_info = record.get("storage") or storage.extract_storage(items, now=now)
+    totals = storage_info.get("totals") or {}
+    volumes = storage_info.get("volumes") or []
+    if total is None and volumes:
+        primary = volumes[0]
+        total = primary.get("total_bytes")
+        volume = primary.get("volume")
+
     status = "stale"
     if any(now - metric.get("lastclock", 0) <= 3600 for metric in gauges.values()):
         status = "recent"
@@ -33,7 +46,13 @@ def overview_summary(record, now):
         break
     return {
         "specs": record.get("specs") or specifications(items, None),
-        "disk_bytes": total, "disk_volume": volume, "status": status,
+        "disk_bytes": total,
+        "disk_volume": volume,
+        "disks_count": totals.get("volume_count", len(volumes)),
+        "disks_total_bytes": totals.get("total_bytes"),
+        "disks_used_bytes": totals.get("used_bytes"),
+        "disks_free_bytes": totals.get("free_bytes"),
+        "status": status,
     }
 
 
@@ -75,9 +94,13 @@ def specifications(items, inventory):
 
     model = readings.get("system.hw.cpu[0,model]") or readings.get("system.hw.cpu[all,model]")
     if not model:
-        model = next((value for key, value in readings.items()
-                      if re.fullmatch(r'wmi\.get\[root[\\/]cimv2,\s*"?select\s+name\s+from\s+win32_processor"?\]',
-                                      key)), None)
+        model = next((
+            value for key, value in readings.items()
+            if re.fullmatch(
+                r'wmi\.get\[root[\\/]cimv2,\s*"?select\s+name\s+from\s+win32_processor"?\]',
+                key,
+            )
+        ), None)
     cores = readings.get("system.cpu.num[online]") or readings.get("system.cpu.num")
     if not cores:
         cores = next((value for key, value in readings.items() if re.fullmatch(

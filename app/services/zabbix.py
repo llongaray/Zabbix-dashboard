@@ -151,8 +151,10 @@ def items(host_id):
         raise ZabbixError("ID de host inválido.", 400)
     return call("item.get", {
         "hostids": [str(host_id)],
+        # Inclui `state` da API Zabbix 7.0 (0=normal, 1=não suportado) para
+        # descartar métricas inválidas ao montar múltiplos discos e especificações.
         "output": ["itemid", "name", "key_", "lastvalue", "units",
-                   "value_type", "lastclock", "status"],
+                   "value_type", "lastclock", "status", "state"],
         "filter": {"status": 0},
     })
 
@@ -167,8 +169,36 @@ def items_for_hosts(host_ids):
     return call("item.get", {
         "hostids": normalized,
         "output": ["itemid", "hostid", "name", "key_", "lastvalue",
-                   "units", "value_type", "lastclock", "status"],
+                   "units", "value_type", "lastclock", "status", "state"],
         "filter": {"status": 0},
+    })
+
+
+def storage_items(host_id):
+    """Consulta direcionada na API Zabbix 7.0 para volumes, discos físicos e top uso.
+
+    Usa parâmetros específicos do Zabbix 7.0 (`searchByAny`, `startSearch`,
+    `selectTags`, `selectItemDiscovery` e `filter.state=0`) para reduzir volume
+    quando for necessário consultar apenas itens de armazenamento de um host.
+    """
+    if not str(host_id).isdigit():
+        raise ZabbixError("ID de host inválido.", 400)
+    return call("item.get", {
+        "hostids": [str(host_id)],
+        "output": ["itemid", "hostid", "name", "key_", "lastvalue",
+                   "units", "value_type", "lastclock", "status", "state"],
+        "filter": {"status": 0, "state": 0},
+        "search": {
+            "key_": [
+                "vfs.fs.", "vfs.dev.", "vfs.dir.size[",
+                "smart.disk.", "wmi.getall[", "custom.disk.",
+            ],
+        },
+        "startSearch": True,
+        "searchByAny": True,
+        "monitored": True,
+        "selectTags": ["tag", "value"],
+        "selectItemDiscovery": ["itemid", "parent_itemid"],
     })
 
 
